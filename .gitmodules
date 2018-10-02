@@ -1,0 +1,3 @@
+[submodule "breep"]
+	path = breep
+	url = https://github.com/organic-code/breep/

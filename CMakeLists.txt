@@ -16,6 +16,11 @@ include_directories(include)
 
 link_directories(${Boost_LIBRARY_DIRS})
 
-add_executable(SysDist-chat src/main.cpp)
+file(GLOB SysDist-chat_SRC
+        "include/*.hpp"
+        "src/*.cpp"
+        )
+
+add_executable(SysDist-chat ${SysDist-chat_SRC})
 
 target_link_libraries(SysDist-chat ${OPENAL_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})

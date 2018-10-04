@@ -1,3 +1,6 @@
+#ifndef SYSDIST_CHAT_SOUND_SENDER_HPP
+#define SYSDIST_CHAT_SOUND_SENDER_HPP
+
 /*************************************************************************************
  * MIT License                                                                       *
  *                                                                                   *
@@ -23,63 +26,31 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <AL/al.h>
-#include <AL/alc.h>
-
-#include <list>
-#include <array>
 
 #include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
 
 #include "sound_def.hpp"
-#include "sound_sender.hpp"
-#include "flow_controller.hpp"
 
-void sender();
-void receiver();
 
-int main(int argc,char* argv[])
-{
-	if (argc < 2) {
-		std::cout << "Missing arguments\n";
-		return 1;
-	}
+class sound_sender {
+public:
+	explicit sound_sender() noexcept;
+	sound_sender(sound_sender&& other) noexcept;
+	sound_sender& operator=(sound_sender&& other) noexcept;
 
-	if (std::string(argv[1]) == "sender") {
-		sender();
-	} else if (std::string(argv[1]) == "receiver") {
-		receiver();
-	} else {
-		std::cout << "Unknown: " << argv[1] << '\n';
-		return 1;
-	}
-	return 0;
-}
+	~sound_sender();
 
-void receiver() {
+	sound_sender(const sound_sender&) = delete;
+	sound_sender& operator=(const sound_sender&) = delete;
 
-	breep::tcp::network network(1233);
-	network.set_log_level(breep::log_level::info);
+	void send_sample(const breep::tcp::network& net) noexcept;
 
-	network.add_data_listener<sound_buffer_t>([](breep::tcp::netdata_wrapper<sound_buffer_t>& value) {
-		audio_source::play(value.data);
-	});
+private:
+	ALCdevice* m_inputDevice;
 
-	network.sync_connect(boost::asio::ip::address_v4::loopback(), 1234);
+	sound_buffer_t buffer;     // A buffer to hold captured audio
 
-}
+};
 
-void sender() {
 
-	breep::tcp::network network(1234);
-	network.set_log_level(breep::log_level::info);
-	network.awake();
-
-	sound_sender ssender{};
-
-	while (true) {
-		ssender.send_sample(network);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-}
+#endif //SYSDIST_CHAT_SOUND_SENDER_HPP

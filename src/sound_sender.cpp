@@ -23,63 +23,48 @@
  *                                                                                   *
  *************************************************************************************/
 
+#include "sound_sender.hpp"
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <sound_sender.hpp>
 
-#include <list>
-#include <array>
 
-#include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
+sound_sender::sound_sender() noexcept {
 
-#include "sound_def.hpp"
-#include "sound_sender.hpp"
-#include "flow_controller.hpp"
-
-void sender();
-void receiver();
-
-int main(int argc,char* argv[])
-{
-	if (argc < 2) {
-		std::cout << "Missing arguments\n";
-		return 1;
-	}
-
-	if (std::string(argv[1]) == "sender") {
-		sender();
-	} else if (std::string(argv[1]) == "receiver") {
-		receiver();
-	} else {
-		std::cout << "Unknown: " << argv[1] << '\n';
-		return 1;
-	}
-	return 0;
+	// Request the default capture device with a half-second buffer
+	m_inputDevice = alcCaptureOpenDevice(nullptr, cst::frequency, AL_FORMAT_MONO16, cst::frequency / 2);
+	alcCaptureStart(m_inputDevice);
 }
 
-void receiver() {
-
-	breep::tcp::network network(1233);
-	network.set_log_level(breep::log_level::info);
-
-	network.add_data_listener<sound_buffer_t>([](breep::tcp::netdata_wrapper<sound_buffer_t>& value) {
-		audio_source::play(value.data);
-	});
-
-	network.sync_connect(boost::asio::ip::address_v4::loopback(), 1234);
-
+sound_sender::sound_sender(sound_sender&& other) noexcept {
+	m_inputDevice = other.m_inputDevice;
+	other.m_inputDevice = nullptr;
 }
 
-void sender() {
+sound_sender& sound_sender::operator=(sound_sender&& other) noexcept {
+	m_inputDevice = other.m_inputDevice;
+	other.m_inputDevice = nullptr;
+	return *this;
+}
 
-	breep::tcp::network network(1234);
-	network.set_log_level(breep::log_level::info);
-	network.awake();
-
-	sound_sender ssender{};
-
-	while (true) {
-		ssender.send_sample(network);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+sound_sender::~sound_sender() {
+	if (m_inputDevice) {
+		alcCaptureStop(m_inputDevice);
+		alcCaptureCloseDevice(m_inputDevice);
 	}
 }
+
+void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
+
+	ALCint samplesIn = 0; // How many samples were captured
+
+	// Poll for captured audio
+	alcGetIntegerv(m_inputDevice, ALC_CAPTURE_SAMPLES, 1, &samplesIn);
+
+	if (samplesIn > cst::cap_size) {
+		// Grab the sound
+		alcCaptureSamples(m_inputDevice, buffer.data(), cst::cap_size);
+		net.send_object(buffer);
+	}
+}
+

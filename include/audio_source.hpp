@@ -1,3 +1,6 @@
+#ifndef SYSDIST_CHAT_AUDIO_SOURCE_HPP
+#define SYSDIST_CHAT_AUDIO_SOURCE_HPP
+
 /*************************************************************************************
  * MIT License                                                                       *
  *                                                                                   *
@@ -23,63 +26,13 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <AL/al.h>
-#include <AL/alc.h>
-
-#include <list>
-#include <array>
-
-#include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
-
 #include "sound_def.hpp"
-#include "sound_sender.hpp"
-#include "flow_controller.hpp"
 
-void sender();
-void receiver();
+namespace audio_source {
 
-int main(int argc,char* argv[])
-{
-	if (argc < 2) {
-		std::cout << "Missing arguments\n";
-		return 1;
-	}
+	void play(const sound_buffer_t& buffer);
 
-	if (std::string(argv[1]) == "sender") {
-		sender();
-	} else if (std::string(argv[1]) == "receiver") {
-		receiver();
-	} else {
-		std::cout << "Unknown: " << argv[1] << '\n';
-		return 1;
-	}
-	return 0;
-}
+};
 
-void receiver() {
 
-	breep::tcp::network network(1233);
-	network.set_log_level(breep::log_level::info);
-
-	network.add_data_listener<sound_buffer_t>([](breep::tcp::netdata_wrapper<sound_buffer_t>& value) {
-		audio_source::play(value.data);
-	});
-
-	network.sync_connect(boost::asio::ip::address_v4::loopback(), 1234);
-
-}
-
-void sender() {
-
-	breep::tcp::network network(1234);
-	network.set_log_level(breep::log_level::info);
-	network.awake();
-
-	sound_sender ssender{};
-
-	while (true) {
-		ssender.send_sample(network);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-}
+#endif //SYSDIST_CHAT_AUDIO_SOURCE_HPP

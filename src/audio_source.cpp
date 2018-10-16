@@ -30,44 +30,46 @@
 #include "sound_def.hpp"
 #include "audio_source.hpp"
 
-struct audio_source_life_manager {
-	audio_source_life_manager() {
+namespace {
+	struct audio_source_life_manager {
+		audio_source_life_manager() {
 
-		audioDevice = alcOpenDevice(nullptr);
-		if (!audioDevice) {
-			throw std::runtime_error("No audio device found.");
+			audioDevice = alcOpenDevice(nullptr);
+			if (!audioDevice) {
+				throw std::runtime_error("No audio device found.");
+			}
+
+			audioContext = alcCreateContext(audioDevice, nullptr);
+			alcMakeContextCurrent(audioContext);
+
+			alGenBuffers(16, audioBuffer);
+
+			// Queue our buffers onto an STL list
+			for (unsigned int ii : audioBuffer) {
+				bufferQueue.push_back(ii);
+			}
+			alGenSources(1, &audioSource); // Create a sound source
 		}
 
-		audioContext = alcCreateContext(audioDevice, nullptr);
-		alcMakeContextCurrent(audioContext);
+		~audio_source_life_manager() {
 
-		alGenBuffers(16, audioBuffer);
+			alSourceStopv(1, &audioSource);
+			alSourcei(audioSource, AL_BUFFER, 0);
 
-		// Queue our buffers onto an STL list
-		for (unsigned int ii : audioBuffer) {
-			bufferQueue.push_back(ii);
+			alDeleteSources(1, &audioSource);
+			alDeleteBuffers(16, audioBuffer);
+
+			alcMakeContextCurrent(nullptr);
+			alcDestroyContext(audioContext);
+			alcCloseDevice(audioDevice);
 		}
-		alGenSources (1, &audioSource); // Create a sound source
-	}
 
-	~audio_source_life_manager() {
-
-		alSourceStopv(1, &audioSource);
-		alSourcei(audioSource, AL_BUFFER, 0);
-
-		alDeleteSources(1, &audioSource);
-		alDeleteBuffers(16, audioBuffer);
-
-		alcMakeContextCurrent(nullptr);
-		alcDestroyContext(audioContext);
-		alcCloseDevice(audioDevice);
-	}
-
-	ALCdevice* audioDevice{};
-	ALCcontext* audioContext{};
-	ALuint audioBuffer[16]{}, audioSource{};
-	std::list<ALuint> bufferQueue{}; // A quick and dirty queue of buffer objects
-};
+		ALCdevice * audioDevice{};
+		ALCcontext * audioContext{};
+		ALuint audioBuffer[16]{}, audioSource{};
+		std::list<ALuint> bufferQueue{}; // A quick and dirty queue of buffer objects
+	};
+}
 
 void audio_source::play(const sound_buffer_t& buffer) {
 	static audio_source_life_manager aslm{};

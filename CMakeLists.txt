@@ -37,6 +37,7 @@ file(
     GLOB SysDist-chat_SRC
     "include/*.hpp"
     "src/*.cpp"
+    "include/inl/*.inl"
 )
 
 add_executable(SysDist-chat ${SysDist-chat_SRC})

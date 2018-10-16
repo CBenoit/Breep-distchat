@@ -44,13 +44,15 @@ public:
 	sound_sender& operator=(const sound_sender&) = delete;
 
 	void send_sample(const breep::tcp::network& net) noexcept;
+	void send_sample_to(const breep::tcp::network& net, const breep::tcp::peer&) noexcept;
 
 private:
-	ALCdevice* m_inputDevice;
+	ALCdevice* m_inputDevice{};
 
-	sound_buffer_t buffer;     // A buffer to hold captured audio
+	sound_buffer_t buffer{};     // A buffer to hold captured audio
 
 };
 
+#include "inl/sound_sender.inl"
 
 #endif //SYSDIST_CHAT_SOUND_SENDER_HPP

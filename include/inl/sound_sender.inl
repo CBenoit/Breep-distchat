@@ -68,3 +68,17 @@ void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
 	}
 }
 
+void sound_sender::send_sample_to(const breep::tcp::network& net, const breep::tcp::peer& peer) noexcept {
+
+	ALCint samplesIn = 0; // How many samples were captured
+
+	// Poll for captured audio
+	alcGetIntegerv(m_inputDevice, ALC_CAPTURE_SAMPLES, 1, &samplesIn);
+
+	if (samplesIn > cst::cap_size) {
+		// Grab the sound
+		alcCaptureSamples(m_inputDevice, buffer.data(), cst::cap_size);
+		net.send_object_to(peer, buffer);
+	}
+}
+

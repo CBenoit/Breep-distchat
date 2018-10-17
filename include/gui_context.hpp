@@ -23,67 +23,30 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <list>
-#include <array>
+#ifndef SYSDIST_CHAT_GUI_HPP
+#define SYSDIST_CHAT_GUI_HPP
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
+#include <chat_window.hpp>
 
-#include <sound_def.hpp>
-#include <sound_sender.hpp>
-#include <flow_controller.hpp>
-#include <gui_context.hpp>
+// forward declaration
+struct GLFWwindow;
 
-void sender();
-void receiver();
+namespace gui {
+    struct gui_context final {
+        gui_context();
+        ~gui_context();
 
-int main(int argc,char* argv[])
-{
-    if (argc >= 2) {
-        if (std::string(argv[1]) == "sender") {
-            sender();
-            return 0;
-        } else if (std::string(argv[1]) == "receiver") {
-            receiver();
-            return 0;
-        }
-    }
+        gui_context(const gui_context&) = delete;
+        gui_context& operator=(const gui_context&) = delete;
+        gui_context(gui_context&&) = delete;
+        gui_context& operator=(gui_context&&) = delete;
 
-    gui::gui_context context{};
+        void refresh();
 
-    while (!context.window_should_close) {
-        context.refresh();
-    }
-
-	return 0;
+        GLFWwindow* window;
+        bool window_should_close;
+        chat_window chat;
+    };
 }
 
-void receiver() {
-
-	breep::tcp::network network(1233);
-	network.set_log_level(breep::log_level::info);
-
-	network.add_data_listener<sound_buffer_t>([](breep::tcp::netdata_wrapper<sound_buffer_t>& value) {
-		audio_source::play(value.data);
-	});
-
-	network.sync_connect(boost::asio::ip::address_v4::loopback(), 1234);
-
-}
-
-void sender() {
-
-	breep::tcp::network network(1234);
-	network.set_log_level(breep::log_level::info);
-	network.awake();
-
-	sound_sender ssender{};
-
-	volatile bool b{true};
-	while (b) {
-		ssender.send_sample(network);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-}
+#endif //SYSDIST_CHAT_GUI_HPP

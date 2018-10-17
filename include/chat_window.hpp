@@ -23,67 +23,24 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <list>
-#include <array>
+#ifndef SYSDIST_CHAT_CHAT_WINDOW_HPP
+#define SYSDIST_CHAT_CHAT_WINDOW_HPP
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
+#include <vector>
+#include <string>
 
-#include <sound_def.hpp>
-#include <sound_sender.hpp>
-#include <flow_controller.hpp>
-#include <gui_context.hpp>
+namespace gui {
+    struct chat_window {
+        char input_buf[256];
+        bool scroll_to_bottom;
+        std::vector<std::string> items;
 
-void sender();
-void receiver();
+        chat_window() noexcept;
 
-int main(int argc,char* argv[])
-{
-    if (argc >= 2) {
-        if (std::string(argv[1]) == "sender") {
-            sender();
-            return 0;
-        } else if (std::string(argv[1]) == "receiver") {
-            receiver();
-            return 0;
-        }
-    }
-
-    gui::gui_context context{};
-
-    while (!context.window_should_close) {
-        context.refresh();
-    }
-
-	return 0;
+        void clear_log();
+        void add_log(const std::string &str);
+        void draw(const char *title, bool *p_open);
+    };
 }
 
-void receiver() {
-
-	breep::tcp::network network(1233);
-	network.set_log_level(breep::log_level::info);
-
-	network.add_data_listener<sound_buffer_t>([](breep::tcp::netdata_wrapper<sound_buffer_t>& value) {
-		audio_source::play(value.data);
-	});
-
-	network.sync_connect(boost::asio::ip::address_v4::loopback(), 1234);
-
-}
-
-void sender() {
-
-	breep::tcp::network network(1234);
-	network.set_log_level(breep::log_level::info);
-	network.awake();
-
-	sound_sender ssender{};
-
-	volatile bool b{true};
-	while (b) {
-		ssender.send_sample(network);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-}
+#endif //SYSDIST_CHAT_CHAT_WINDOW_HPP

@@ -51,6 +51,11 @@ namespace {
 			alGenSources(1, &audioSource); // Create a sound source
 		}
 
+		audio_source_life_manager(const audio_source_life_manager&) = delete;
+		audio_source_life_manager& operator=(const audio_source_life_manager&) = delete;
+		audio_source_life_manager(audio_source_life_manager&&) = delete;
+		audio_source_life_manager& operator=(audio_source_life_manager&&) = delete;
+
 		~audio_source_life_manager() {
 
 			alSourceStopv(1, &audioSource);

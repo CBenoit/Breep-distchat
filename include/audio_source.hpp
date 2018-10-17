@@ -32,7 +32,7 @@ namespace audio_source {
 
 	void play(const sound_buffer_t& buffer);
 
-};
+}
 
 
 #endif //SYSDIST_CHAT_AUDIO_SOURCE_HPP

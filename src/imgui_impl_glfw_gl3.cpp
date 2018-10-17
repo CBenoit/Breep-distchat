@@ -158,7 +158,10 @@ void ImGui_ImplGlfwGL3_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-                glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+                glScissor(static_cast<int>(pcmd->ClipRect.x)
+                        , fb_height - static_cast<int>(pcmd->ClipRect.w)
+                        , static_cast<int>(pcmd->ClipRect.z - pcmd->ClipRect.x)
+                        , static_cast<int>(pcmd->ClipRect.w - pcmd->ClipRect.y));
                 glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
             }
             idx_buffer_offset += pcmd->ElemCount;
@@ -230,31 +233,34 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
         io.AddInputCharacter((unsigned short)c);
 }
 
-bool ImGui_ImplGlfwGL3_CreateFontsTexture()
-{
-    // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+namespace {
+    bool ImGui_ImplGlfwGL3_CreateFontsTexture();
+    bool ImGui_ImplGlfwGL3_CreateFontsTexture() {
+        // Build texture atlas
+        ImGuiIO& io = ImGui::GetIO();
+        unsigned char * pixels;
+        int width, height;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width,
+                                     &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
-    // Upload texture to graphics system
-    GLint last_texture;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &g_FontTexture);
-    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        // Upload texture to graphics system
+        GLint last_texture;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+        glGenTextures(1, &g_FontTexture);
+        glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-    // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
+        // Store our identifier
+        io.Fonts->TexID = (void *) (intptr_t) g_FontTexture;
 
-    // Restore state
-    glBindTexture(GL_TEXTURE_2D, last_texture);
+        // Restore state
+        glBindTexture(GL_TEXTURE_2D, last_texture);
 
-    return true;
+        return true;
+    }
 }
 
 bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
@@ -440,12 +446,12 @@ void ImGui_ImplGlfwGL3_NewFrame()
     int display_w, display_h;
     glfwGetWindowSize(g_Window, &w, &h);
     glfwGetFramebufferSize(g_Window, &display_w, &display_h);
-    io.DisplaySize = ImVec2((float)w, (float)h);
-    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
+    io.DisplaySize = ImVec2(static_cast<float>(w), static_cast<float>(h));
+    io.DisplayFramebufferScale = ImVec2(w > 0 ? (static_cast<float>(display_w) / static_cast<float>(w)) : 0, h > 0 ? (static_cast<float>(display_h) / static_cast<float>(h)) : 0);
 
     // Setup time step
     double current_time =  glfwGetTime();
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    io.DeltaTime = g_Time > 0.0 ? static_cast<float>(current_time - g_Time) : (1.0f/60.0f);
     g_Time = current_time;
 
     // Setup inputs

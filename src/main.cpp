@@ -193,7 +193,8 @@ void sender() {
 
 	sound_sender ssender{};
 
-	while (true) {
+	volatile bool b{true};
+	while (b) {
 		ssender.send_sample(network);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}

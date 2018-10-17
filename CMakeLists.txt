@@ -4,6 +4,7 @@ project(SysDist-chat)
 
 set(CMAKE_CXX_STANDARD 17)
 set(BOOST_MIN_VERSION "1.55")
+set(OpenGL_GL_PREFERENCE GLVND)
 
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED system)
 find_package(OpenAL REQUIRED)

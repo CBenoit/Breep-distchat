@@ -95,19 +95,19 @@ void p2pchat::send_to(const breep::tcp::peer& target, const T& value) {
 }
 
 template<typename T>
-void p2pchat::add_callback(callback<T> cb) {
+inline p2pchat::callback_id p2pchat::add_callback(callback<T> cb) {
 	return dual_network.add_data_listener([c = std::move(cb)] (breep::tcp::netdata_wrapper<T>& value) {
 		c(value.data, value.source);
-	})
+	});
 }
 
-inline void p2pchat::remove_callback(const p2pchat::callback_id& cb_id) {
+inline bool p2pchat::remove_callback(const callback_id& cb_id) {
 	return dual_network.remove_data_listener(cb_id);
 }
 
 inline p2pchat::connection_callback_id p2pchat::add_connection_callback(connection_callback cb) {
-	return dual_network.add_connection_listener([this, c = std::move(cb)](auto&, const breep::tcp::peer& peer) {
-		c(*this, peer);
+	return dual_network.add_connection_listener([this, callback = std::move(cb)](auto&, const breep::tcp::peer& peer) {
+		callback(peer);
 	});
 }
 
@@ -122,7 +122,7 @@ inline p2pchat::connection_callback_id p2pchat::add_disconnection_callback(conne
 }
 
 inline bool p2pchat::remove_disconnection_callback(const connection_callback_id& dcb_id) {
-	return dual_network.remove_disconnection_listener(ccb_id);
+	return dual_network.remove_disconnection_listener(dcb_id);
 }
 
 inline bool p2pchat::connect_to(boost::asio::ip::address_v4 addr, unsigned short forward_port) {
@@ -144,5 +144,5 @@ inline void p2pchat::remove_sound_target(const breep::tcp::peer& p) {
 
 inline void p2pchat::remove_sound_target(const boost::uuids::uuid& p) {
 	std::lock_guard lg(sound_targets_mutex);
-	sound_targets.erase(p)
+	sound_targets.erase(p);
 }

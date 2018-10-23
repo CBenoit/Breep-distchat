@@ -46,8 +46,11 @@ public:
 	void send_sample(const breep::tcp::network& net) noexcept;
 	void send_sample_to(const breep::tcp::network& net, const breep::tcp::peer&) noexcept;
 
+	// returns whether a new sample was added or not
+	bool update_sample() noexcept;
+
 private:
-	ALCdevice* m_inputDevice{};
+	ALCdevice* input_device{};
 
 	sound_buffer_t buffer{};     // A buffer to hold captured audio
 

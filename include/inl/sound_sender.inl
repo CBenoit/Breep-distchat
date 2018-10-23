@@ -32,53 +32,47 @@
 inline sound_sender::sound_sender() noexcept {
 
 	// Request the default capture device with a half-second buffer
-	m_inputDevice = alcCaptureOpenDevice(nullptr, cst::frequency, AL_FORMAT_MONO16, cst::frequency / 2);
-	alcCaptureStart(m_inputDevice);
+	input_device = alcCaptureOpenDevice(nullptr, cst::frequency, AL_FORMAT_MONO16, cst::frequency / 2);
+	alcCaptureStart(input_device);
 }
 
 inline sound_sender::sound_sender(sound_sender&& other) noexcept {
-	m_inputDevice = other.m_inputDevice;
-	other.m_inputDevice = nullptr;
+	input_device = other.input_device;
+	other.input_device = nullptr;
 }
 
 inline sound_sender& sound_sender::operator=(sound_sender&& other) noexcept {
-	m_inputDevice = other.m_inputDevice;
-	other.m_inputDevice = nullptr;
+	input_device = other.input_device;
+	other.input_device = nullptr;
 	return *this;
 }
 
 inline sound_sender::~sound_sender() {
-	if (m_inputDevice) {
-		alcCaptureStop(m_inputDevice);
-		alcCaptureCloseDevice(m_inputDevice);
+	if (input_device) {
+		alcCaptureStop(input_device);
+		alcCaptureCloseDevice(input_device);
 	}
 }
 
 inline void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
-
-	ALCint samplesIn = 0; // How many samples were captured
-
-	// Poll for captured audio
-	alcGetIntegerv(m_inputDevice, ALC_CAPTURE_SAMPLES, 1, &samplesIn);
-
-	if (samplesIn > cst::cap_size) {
-		// Grab the sound
-		alcCaptureSamples(m_inputDevice, buffer.data(), cst::cap_size);
-		net.send_object(buffer);
-	}
+	net.send_object(buffer);
 }
 
 inline void sound_sender::send_sample_to(const breep::tcp::network& net, const breep::tcp::peer& peer) noexcept {
+	net.send_object_to(peer, buffer);
+}
 
+inline bool sound_sender::update_sample() noexcept {
 	ALCint samplesIn = 0; // How many samples were captured
 
 	// Poll for captured audio
-	alcGetIntegerv(m_inputDevice, ALC_CAPTURE_SAMPLES, 1, &samplesIn);
+	alcGetIntegerv(input_device, ALC_CAPTURE_SAMPLES, 1, &samplesIn);
 
 	if (samplesIn > cst::cap_size) {
 		// Grab the sound
-		alcCaptureSamples(m_inputDevice, buffer.data(), cst::cap_size);
-		net.send_object_to(peer, buffer);
+		alcCaptureSamples(input_device, buffer.data(), cst::cap_size);
+		return true;
 	}
-}
 
+	return false;
+}

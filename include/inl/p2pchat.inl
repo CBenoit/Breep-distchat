@@ -72,6 +72,7 @@ inline void p2pchat::local_sound_input() {
 	while (!should_quit) {
 		if (sending_voice) {
 			std::scoped_lock sl(sound_targets_mutex, peers_map_mutex)
+			s_sender.update_sample();
 			for (auto&& sound_target : sound_targets) {
 				s_sender.send_sample_to(dual_network, peers_map.at(sound_target));
 			}

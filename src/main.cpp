@@ -34,14 +34,19 @@
 #include <sound_def.hpp>
 #include <sound_sender.hpp>
 #include <flow_controller.hpp>
-#include <gui_context.hpp>
+#include <display.hpp>
 
 void sender();
 void receiver();
 
-int main(int argc,char* argv[])
-{
-    if (argc >= 2) {
+int main(int argc,char* argv[]) {
+
+	display::gui gui;
+	audio_source::init();
+
+	while (gui.display());
+
+    /*if (argc >= 2) {
         if (std::string(argv[1]) == "sender") {
             sender();
             return 0;
@@ -49,13 +54,7 @@ int main(int argc,char* argv[])
             receiver();
             return 0;
         }
-    }
-
-    gui::gui_context context{};
-
-    while (!context.window_should_close) {
-        context.refresh();
-    }
+    }*/
 
 	return 0;
 }

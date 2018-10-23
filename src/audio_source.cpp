@@ -26,6 +26,9 @@
 #include <AL/alc.h>
 #include <AL/al.h>
 #include <list>
+#include <thread>
+#include <iostream>
+#include <cmath>
 
 #include "sound_def.hpp"
 #include "audio_source.hpp"
@@ -74,44 +77,53 @@ namespace {
 		ALuint audioBuffer[16]{}, audioSource{};
 		std::list<ALuint> bufferQueue{}; // A quick and dirty queue of buffer objects
 	};
+
+	audio_source_life_manager* aslm = nullptr;
 }
 
-void audio_source::play(const sound_buffer_t& buffer) {
-	static audio_source_life_manager aslm{};
+void audio_source::init() {
+	static audio_source_life_manager aslm_{};
+	aslm = &aslm_;
+}
 
-	ALint availBuffers = 0;           // Buffers to be recovered
-	ALuint myBuff;                    // The buffer we're using
-	ALuint buffHolder[16];            // An array to hold catch the unqueued buffers
+void audio_source::play(const sound_buffer_t& buffer) noexcept {
+
+	if (aslm) {
+
+		ALint availBuffers = 0;           // Buffers to be recovered
+		ALuint myBuff;                    // The buffer we're using
+		ALuint buffHolder[16];            // An array to hold catch the unqueued buffers
 
 
-	// Poll for recoverable buffers
-	alGetSourcei(aslm.audioSource, AL_BUFFERS_PROCESSED, &availBuffers);
-	if (availBuffers > 0) {
+		// Poll for recoverable buffers
+		alGetSourcei(aslm->audioSource, AL_BUFFERS_PROCESSED, &availBuffers);
+		if (availBuffers > 0) {
 
-		alSourceUnqueueBuffers(aslm.audioSource, availBuffers, buffHolder);
-		for (int ii = 0 ; ii < availBuffers ; ++ii) {
-			// Push the recovered buffers back on the queue
-			aslm.bufferQueue.push_back(buffHolder[ii]);
+			alSourceUnqueueBuffers(aslm->audioSource, availBuffers, buffHolder);
+			for (int ii = 0 ; ii < availBuffers ; ++ii) {
+				// Push the recovered buffers back on the queue
+				aslm->bufferQueue.push_back(buffHolder[ii]);
+			}
 		}
-	}
 
-	// Stuff the captured data in a buffer-object
-	if (!aslm.bufferQueue.empty()) { // We just drop the data if no buffers are available
-		myBuff = aslm.bufferQueue.front();
-		aslm.bufferQueue.pop_front();
+		// Stuff the captured data in a buffer-object
+		if (!aslm->bufferQueue.empty()) { // We just drop the data if no buffers are available
+			myBuff = aslm->bufferQueue.front();
+			aslm->bufferQueue.pop_front();
 
-		alBufferData(myBuff, AL_FORMAT_MONO16, buffer.data(), cst::cap_size * sizeof(short), cst::frequency);
+			alBufferData(myBuff, AL_FORMAT_MONO16, buffer.data(), cst::cap_size * sizeof(short), cst::frequency);
 
-		// Queue the buffer
-		alSourceQueueBuffers(aslm.audioSource, 1, &myBuff);
+			// Queue the buffer
+			alSourceQueueBuffers(aslm->audioSource, 1, &myBuff);
 
-		// Restart the source if needed
-		// (if we take too long and the queue dries up,
-		//  the source stops playing).
-		ALint sState = 0;
-		alGetSourcei(aslm.audioSource, AL_SOURCE_STATE,&sState);
-		if (sState!=AL_PLAYING) {
-			alSourcePlay(aslm.audioSource);
+			// Restart the source if needed
+			// (if we take too long and the queue dries up,
+			//  the source stops playing).
+			ALint sState = 0;
+			alGetSourcei(aslm->audioSource, AL_SOURCE_STATE, &sState);
+			if (sState != AL_PLAYING) {
+				alSourcePlay(aslm->audioSource);
+			}
 		}
 	}
 }

@@ -29,32 +29,32 @@
 #include <sound_sender.hpp>
 
 
-sound_sender::sound_sender() noexcept {
+inline sound_sender::sound_sender() noexcept {
 
 	// Request the default capture device with a half-second buffer
 	m_inputDevice = alcCaptureOpenDevice(nullptr, cst::frequency, AL_FORMAT_MONO16, cst::frequency / 2);
 	alcCaptureStart(m_inputDevice);
 }
 
-sound_sender::sound_sender(sound_sender&& other) noexcept {
+inline sound_sender::sound_sender(sound_sender&& other) noexcept {
 	m_inputDevice = other.m_inputDevice;
 	other.m_inputDevice = nullptr;
 }
 
-sound_sender& sound_sender::operator=(sound_sender&& other) noexcept {
+inline sound_sender& sound_sender::operator=(sound_sender&& other) noexcept {
 	m_inputDevice = other.m_inputDevice;
 	other.m_inputDevice = nullptr;
 	return *this;
 }
 
-sound_sender::~sound_sender() {
+inline sound_sender::~sound_sender() {
 	if (m_inputDevice) {
 		alcCaptureStop(m_inputDevice);
 		alcCaptureCloseDevice(m_inputDevice);
 	}
 }
 
-void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
+inline void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
 
 	ALCint samplesIn = 0; // How many samples were captured
 
@@ -68,7 +68,7 @@ void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
 	}
 }
 
-void sound_sender::send_sample_to(const breep::tcp::network& net, const breep::tcp::peer& peer) noexcept {
+inline void sound_sender::send_sample_to(const breep::tcp::network& net, const breep::tcp::peer& peer) noexcept {
 
 	ALCint samplesIn = 0; // How many samples were captured
 

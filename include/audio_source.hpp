@@ -30,7 +30,9 @@
 
 namespace audio_source {
 
-	void play(const sound_buffer_t& buffer);
+	void init();
+
+	void play(const sound_buffer_t& buffer) noexcept;
 
 }
 

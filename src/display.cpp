@@ -4,6 +4,8 @@
 #include <atomic>
 #include <SFML/Window/Event.hpp>
 #include <imgui-SFML.h>
+#include <thread>
+#include <iostream>
 
 namespace {
 	std::atomic<bool> instantiaded{false};
@@ -21,6 +23,7 @@ namespace {
 
 IMGUIGUARD(MenuBar);
 IMGUIGUARD(Menu);
+IMGUIGUARD(Child);
 
 #undef IMGUIGUARD
 #define Scoped(x) x + [&]()
@@ -31,18 +34,26 @@ bool display::is_intiantiated() {
 }
 
 display::gui::gui()
-		: window{sf::VideoMode(1280, 720), "Clonnect"}, clk{}
+		: window{sf::VideoMode(1280, 720), "Clonnect"}
+		, clk{}
 		, frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar}
 {
 	if (instantiaded.exchange(true)) {
 		throw std::logic_error("Tried to create more than one gui.");
 	}
+	textinput_buffer.reserve(2048);
 
 	window.setVerticalSyncEnabled(true);
+	window.setFramerateLimit(60);
 
 	ImGui::SFML::Init(window);
 	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
+
+	add_message("Jean-Louis", "Message 1");
+	add_message("Jean-Louis", "Message 2");
+	add_message("Marcel", "Message 1");
+	add_message("Jean-Louis", "Message 3");
 }
 
 display::gui::~gui() {
@@ -84,22 +95,37 @@ void display::gui::update_frame() {
 
 	Scoped(MenuBar()) {
 		Scoped(Menu("Options")) {
-			Scoped(Menu("Color theme")) {
-
-			};
+//			Scoped(Menu("Color theme")) {
+//
+//			};
 			if(ImGui::MenuItem("Quit")) {
-				ImGui::SFML::Shutdown();
-				exit(0);
+				window.close();
 			}
 		};
 	};
 
-	static bool inputCustomBases, outputDefaultBases, outputCustomBases;
-	if(ImGui::CollapsingHeader("Config", ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		ImGui::Checkbox("Input custom bases", &inputCustomBases);
-		ImGui::Checkbox("Output default bases", &outputDefaultBases);
-		ImGui::Checkbox("Output custom bases", &outputCustomBases);
+	Scoped(Child(ImGui::GetID("chat"), ImVec2(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y - 60)))) {
+		update_chat_frame();
+	};
+
+	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f}
+	, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AllowTabInput)) {
+		textinput_callback(std::string_view(textinput_buffer.data()));
+		textinput_buffer[0] = '\0';
 	}
 
 }
+
+void display::gui::update_chat_frame() {
+	std::lock_guard lg(msg_mutex);
+	for (auto&& msg : messages) {
+		ImGui::PushTextWrapPos(0.0f);
+		ImGui::TextColored({1.f, 1.f, 1.f, 1.f}, "%s", msg.first.c_str());
+		ImGui::SameLine();
+		ImGui::Text(": %s", msg.second.c_str());
+		ImGui::PopTextWrapPos();
+	}
+}
+
+
+#undef Scoped

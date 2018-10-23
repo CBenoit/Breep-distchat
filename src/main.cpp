@@ -35,6 +35,9 @@
 #include <sound_sender.hpp>
 #include <flow_controller.hpp>
 #include <display.hpp>
+#include <p2pchat.hpp>
+
+BREEP_DECLARE_TYPE(std::string)
 
 void sender();
 void receiver();
@@ -43,6 +46,35 @@ int main(int argc,char* argv[]) {
 
 	display::gui gui;
 	audio_source::init();
+
+	unsigned short p;
+	std::cout << "Local port: ";
+	std::cin >> p;
+	p2pchat chat(p);
+
+	std::cout << "Connect to remote [0/1]: ";
+	std::cin >> p;
+	if (p == 1) {
+		std::string addr;
+		std::cout << "Remote ipv4 address: ";
+		std::cin >> addr;
+		std::cout << "Remote port: ";
+		std::cin >> p;
+		if (!chat.connect_to(boost::asio::ip::address_v4::from_string(addr), p)) {
+			throw "Failed to connect.\n";
+		}
+	}
+
+	const breep::tcp::peer* peer = nullptr;
+	chat.add_connection_callback([&peer](const breep::tcp::peer& lp) { peer = &lp; });
+
+	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
+		std::string s(v);
+		gui.add_message("Local dummy", s);
+		if (peer) {
+			chat.send_to(*peer, s);
+		}
+	});
 
 	while (gui.display());
 

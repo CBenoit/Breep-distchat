@@ -45,7 +45,7 @@ public:
 
 	bool connect_to(boost::asio::ip::address_v4, unsigned short forward_port);
 
-	void send_voice(bool should_send);
+	void send_voice(bool should_send = true);
 	void mute_sound_input(bool muted);
 
 	void add_sound_target(const breep::tcp::peer& p);

@@ -44,7 +44,7 @@ inline p2pchat::p2pchat(unsigned short local_port)
 		peers_map_mutex.unlock();
 		std::lock_guard lg(sound_targets_mutex);
 		sound_targets.erase(p.id());
-	})
+	});
 }
 
 inline p2pchat::p2pchat(unsigned short local_port, boost::asio::ip::address_v4 connection_address,
@@ -55,7 +55,7 @@ inline p2pchat::p2pchat(unsigned short local_port, boost::asio::ip::address_v4 c
 }
 
 inline void p2pchat::send_voice(bool should_send) {
-	sending_voice = true;
+	sending_voice = should_send;
 }
 
 inline void p2pchat::mute_sound_input(bool muted) {
@@ -71,7 +71,7 @@ inline void p2pchat::network_sound_input_callback(breep::tcp::netdata_wrapper<so
 inline void p2pchat::local_sound_input() {
 	while (!should_quit) {
 		if (sending_voice) {
-			std::scoped_lock sl(sound_targets_mutex, peers_map_mutex)
+			std::scoped_lock sl(sound_targets_mutex, peers_map_mutex);
 			s_sender.update_sample();
 			for (auto&& sound_target : sound_targets) {
 				s_sender.send_sample_to(dual_network, peers_map.at(sound_target));
@@ -90,7 +90,7 @@ inline p2pchat::~p2pchat() {
 
 template<typename T>
 void p2pchat::send_to(const breep::tcp::peer& target, const T& value) {
-	static_assert(!std::is_same_v<std::remove_cv_t<T>, char*>, "You should not send char*")
+	static_assert(!std::is_same_v<std::remove_cv_t<T>, char*>, "You should not send char*");
 	dual_network.send_object_to(target, value);
 }
 

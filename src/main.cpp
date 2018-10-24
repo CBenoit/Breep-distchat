@@ -52,6 +52,16 @@ int main(int argc,char* argv[]) {
 	std::cin >> p;
 	p2pchat chat(p);
 
+	std::unique_ptr<breep::tcp::peer> peer = nullptr;
+	chat.add_connection_callback([&peer](const breep::tcp::peer& lp) {
+		std::cout << "Connected: " << lp.id_as_string() << '\n';
+		peer = std::make_unique<breep::tcp::peer>(lp);
+	});
+
+	chat.add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
+		gui.add_message(source.id_as_string(), data);
+	});
+
 	std::cout << "Connect to remote [0/1]: ";
 	std::cin >> p;
 	if (p == 1) {
@@ -60,13 +70,12 @@ int main(int argc,char* argv[]) {
 		std::cin >> addr;
 		std::cout << "Remote port: ";
 		std::cin >> p;
-		if (!chat.connect_to(boost::asio::ip::address_v4::from_string(addr), p)) {
+		if (!chat.connect_to(boost::asio::ip::address_v4::loopback(), p)) {
 			throw "Failed to connect.\n";
 		}
+	} else {
+		chat.awake();
 	}
-
-	const breep::tcp::peer* peer = nullptr;
-	chat.add_connection_callback([&peer](const breep::tcp::peer& lp) { peer = &lp; });
 
 	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
 		std::string s(v);

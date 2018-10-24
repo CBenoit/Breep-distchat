@@ -73,7 +73,8 @@ bool display::gui::display() {
 			return false;
 		}
 
-		ImGui::SFML::ProcessEvent(ev);
+		if ((ev.type != sf::Event::KeyPressed && ev.type != sf::Event::KeyReleased) || ev.key.code != sf::Keyboard::Unknown)
+			ImGui::SFML::ProcessEvent(ev);
 	}
 
 	ImGui::SFML::Update(window, clk.restart());

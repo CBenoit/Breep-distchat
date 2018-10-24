@@ -43,6 +43,8 @@ public:
 	explicit p2pchat(unsigned short local_port);
 	p2pchat(unsigned short local_port, boost::asio::ip::address_v4 connection_address, unsigned short forward_port);
 
+	void awake();
+
 	bool connect_to(boost::asio::ip::address_v4, unsigned short forward_port);
 
 	void send_voice(bool should_send = true);

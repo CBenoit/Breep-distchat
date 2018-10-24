@@ -33,6 +33,7 @@ inline p2pchat::p2pchat(unsigned short local_port)
 		: dual_network{local_port}
 		, sound_sender_thread{[this](){local_sound_input();}}
 {
+	dual_network.set_log_level(breep::log_level::trace);
 	dual_network.add_data_listener<sound_buffer_t>([this](auto& value) { network_sound_input_callback(value); });
 	dual_network.add_connection_listener([this](auto&, const breep::tcp::peer& p) {
 		std::lock_guard lg(peers_map_mutex);
@@ -52,6 +53,10 @@ inline p2pchat::p2pchat(unsigned short local_port, boost::asio::ip::address_v4 c
 		: p2pchat(local_port)
 {
 	dual_network.connect(connection_address, forward_port);
+}
+
+inline void p2pchat::awake() {
+	dual_network.awake();
 }
 
 inline void p2pchat::send_voice(bool should_send) {
@@ -96,7 +101,7 @@ void p2pchat::send_to(const breep::tcp::peer& target, const T& value) {
 
 template<typename T>
 inline p2pchat::callback_id p2pchat::add_callback(callback<T> cb) {
-	return dual_network.add_data_listener([c = std::move(cb)] (breep::tcp::netdata_wrapper<T>& value) {
+	return dual_network.add_data_listener<T>([c = std::move(cb)] (breep::tcp::netdata_wrapper<T>& value) {
 		c(value.data, value.source);
 	});
 }
@@ -116,7 +121,7 @@ inline bool p2pchat::remove_connection_callback(const connection_callback_id& cc
 }
 
 inline p2pchat::connection_callback_id p2pchat::add_disconnection_callback(connection_callback cb) {
-	return dual_network.add_disconnection_listener([this, c = std::move(cb)](auto&, const breep::tcp::peer& peer) {
+	return dual_network.add_disconnection_listener([c = std::move(cb)](auto&, const breep::tcp::peer& peer) {
 		c(peer);
 	});
 }

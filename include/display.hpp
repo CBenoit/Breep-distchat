@@ -4,6 +4,8 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <mutex>
 #include <functional>
+#include <imgui.h>
+#include <iostream>
 
 namespace display {
 	bool is_intiantiated();
@@ -17,6 +19,11 @@ namespace display {
 		bool display();
 
 		bool is_open() { return window.isOpen(); }
+
+		void system_message(std::string_view message, const ImVec4& color) {
+			// TODO
+			std::cerr << "TODO: " << __FILE__ << ':' << __LINE__ << '\n';
+		}
 
 		void add_message(std::string author, std::string msg) {
 			std::lock_guard lg(msg_mutex);

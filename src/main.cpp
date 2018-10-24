@@ -58,6 +58,11 @@ int main(int argc,char* argv[]) {
 		peer = std::make_unique<breep::tcp::peer>(lp);
 	});
 
+	chat.add_disconnection_callback([&peer, &gui](const breep::tcp::peer& lp) {
+		gui.system_message("Disconnected: " + lp.id_as_string());
+		peer = nullptr;
+	});
+
 	chat.add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
 		gui.add_message(source.id_as_string(), data);
 	});

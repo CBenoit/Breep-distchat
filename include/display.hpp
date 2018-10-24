@@ -8,6 +8,18 @@
 #include <iostream>
 
 namespace display {
+
+	enum class colors {
+		red = 0xDC143C,
+		blue = 0x00BFFF,
+		green = 0x00FF7F,
+		cyan = 0xE0FFFF,
+		pink = 0xFF69B4,
+		yellow = 0xFAFAD2,
+		white = 0xFFFFF0,
+		system = 0x6495ED
+	};
+
 	bool is_intiantiated();
 
 	class gui {
@@ -20,14 +32,14 @@ namespace display {
 
 		bool is_open() { return window.isOpen(); }
 
-		void system_message(std::string_view message, const ImVec4& color) {
-			// TODO
-			std::cerr << "TODO: " << __FILE__ << ':' << __LINE__ << '\n';
+		void system_message(std::string_view message) {
+			std::lock_guard lg(msg_mutex);
+			system_messages.emplace_back(system_messages.size() + messages.size(), message);
 		}
 
-		void add_message(std::string author, std::string msg) {
+		void add_message(std::string_view author, std::string_view msg) {
 			std::lock_guard lg(msg_mutex);
-			messages.emplace_back(std::move(author), std::move(msg));
+			messages.emplace_back(system_messages.size() + messages.size(), author, msg);
 		}
 
 		void set_textinput_callback(std::function<void(std::string_view)> tic) {
@@ -42,7 +54,8 @@ namespace display {
 		sf::Clock clk;
 		const int frame_flags;
 
-		std::vector<std::pair<std::string, std::string>> messages{};
+		std::vector<std::tuple<int, std::string, std::string>> messages{};
+		std::vector<std::tuple<int, std::string>> system_messages{};
 		std::mutex msg_mutex{};
 
 		std::string textinput_buffer{};

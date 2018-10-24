@@ -33,7 +33,7 @@ inline p2pchat::p2pchat(unsigned short local_port)
 		: dual_network{local_port}
 		, sound_sender_thread{[this](){local_sound_input();}}
 {
-	dual_network.set_log_level(breep::log_level::trace);
+	dual_network.set_log_level(breep::log_level::debug);
 	dual_network.add_data_listener<sound_buffer_t>([this](auto& value) { network_sound_input_callback(value); });
 	dual_network.add_connection_listener([this](auto&, const breep::tcp::peer& p) {
 		std::lock_guard lg(peers_map_mutex);

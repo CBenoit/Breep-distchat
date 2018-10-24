@@ -9,6 +9,30 @@
 
 namespace {
 	std::atomic<bool> instantiaded{false};
+	const std::hash<std::string> str_hasher{};
+
+	constexpr display::colors all_colors[] = {
+			display::colors::red,
+			display::colors::blue,
+			display::colors::green,
+			display::colors::cyan,
+			display::colors::pink,
+			display::colors::yellow
+	};
+
+
+	ImVec4 imgui_color(display::colors color) {
+		return {
+				static_cast<float>(static_cast<unsigned int>(color) >> 16u & 0xFF) / 255.f,
+				static_cast<float>(static_cast<unsigned int>(color) >> 8u  & 0xFF) / 255.f,
+				static_cast<float>(static_cast<unsigned int>(color) >> 0u  & 0xFF) / 255.f,
+				1.f
+		};
+	}
+
+	ImVec4 author_color(const std::string& str) {
+		return imgui_color(all_colors[str_hasher(str) % std::size(all_colors)]);
+	}
 }
 
 namespace {
@@ -49,11 +73,6 @@ display::gui::gui()
 
 	ImGui::SFML::Init(window);
 	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
-
-	add_message("Jean-Louis", "Message 1");
-	add_message("Jean-Louis", "Message 2");
-	add_message("Marcel", "Message 1");
-	add_message("Jean-Louis", "Message 3");
 }
 
 display::gui::~gui() {
@@ -118,13 +137,39 @@ void display::gui::update_frame() {
 }
 
 void display::gui::update_chat_frame() {
-	std::lock_guard lg(msg_mutex);
-	for (auto&& msg : messages) {
-		ImGui::PushTextWrapPos(0.0f);
-		ImGui::TextColored({1.f, 1.f, 1.f, 1.f}, "%s", msg.first.c_str());
+
+	auto print_message = [](const std::tuple<int, std::string, std::string>& tpl) {
+		ImGui::PushTextWrapPos();
+		ImGui::TextColored(author_color(std::get<1>(tpl)), "%s:", std::get<1>(tpl).data());
 		ImGui::SameLine();
-		ImGui::Text(": %s", msg.second.c_str());
+		ImGui::TextColored(imgui_color(colors::white), "%s", std::get<2>(tpl).data());
 		ImGui::PopTextWrapPos();
+	};
+
+	auto print_system_message = [](const std::tuple<int, std::string>& tpl) {
+		ImGui::PushTextWrapPos();
+		ImGui::TextColored(imgui_color(colors::system), "%s", std::get<1>(tpl).data());
+		ImGui::PopTextWrapPos();
+	};
+
+	std::lock_guard lg(msg_mutex);
+	auto msg_it = messages.cbegin();
+	auto sys_it = system_messages.cbegin();
+
+	while(msg_it != messages.cend() && sys_it != system_messages.cend()) {
+		if (std::get<int>(*msg_it) < std::get<int>(*sys_it)) {
+			print_message(*msg_it++);
+		} else {
+			print_system_message(*sys_it++);
+		}
+	}
+
+	while (msg_it != messages.cend()) {
+		print_message(*msg_it++);
+	}
+
+	while (sys_it != system_messages.cend()) {
+		print_system_message(*sys_it++);
 	}
 }
 

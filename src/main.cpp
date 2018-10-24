@@ -53,8 +53,8 @@ int main(int argc,char* argv[]) {
 	p2pchat chat(p);
 
 	std::unique_ptr<breep::tcp::peer> peer = nullptr;
-	chat.add_connection_callback([&peer](const breep::tcp::peer& lp) {
-		std::cout << "Connected: " << lp.id_as_string() << '\n';
+	chat.add_connection_callback([&peer, &gui](const breep::tcp::peer& lp) {
+		gui.system_message("Connected: " + lp.id_as_string());
 		peer = std::make_unique<breep::tcp::peer>(lp);
 	});
 
@@ -79,7 +79,7 @@ int main(int argc,char* argv[]) {
 
 	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
 		std::string s(v);
-		gui.add_message("Local dummy", s);
+		gui.add_message(chat.me().id_as_string().data(), s);
 		if (peer) {
 			chat.send_to(*peer, s);
 		}

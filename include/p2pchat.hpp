@@ -74,6 +74,10 @@ public:
 	/* returns true if a listener was removed */
 	bool remove_disconnection_callback(const connection_callback_id& dcb_id);
 
+	const breep::tcp::peer& me() {
+		return dual_network.self();
+	}
+
 	~p2pchat();
 
 private:

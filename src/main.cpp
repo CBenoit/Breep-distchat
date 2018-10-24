@@ -70,7 +70,7 @@ int main(int argc,char* argv[]) {
 		std::cin >> addr;
 		std::cout << "Remote port: ";
 		std::cin >> p;
-		if (!chat.connect_to(boost::asio::ip::address_v4::loopback(), p)) {
+		if (!chat.connect_to(boost::asio::ip::address_v4::from_string(addr), p)) {
 			throw "Failed to connect.\n";
 		}
 	} else {

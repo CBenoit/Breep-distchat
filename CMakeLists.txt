@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(SysDist-chat CXX C)
+project(SysDist-server CXX)
 
 set(BOOST_MIN_VERSION "1.55")
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -79,16 +80,18 @@ make_target(
 )
 target_link_libraries(ImGui-SFML PRIVATE "sfml-system" "sfml-network" "sfml-window" "sfml-graphics" "sfml-audio")
 
-# Setup BaseConverter
+# Setup SysDist-chat
 get_files(
-        files
-        "${root_dir}/src"
-        "${root_dir}/include"
+        chat-files
+        "${root_dir}/src-chat"
+        "${root_dir}/include-chat"
+        "${root_dir}/include-common"
         OPTIONS recurse
 )
+
 make_target(
-        SysDist-chat "SysDist-chat" ${files}
-        INCLUDES "include/"
+        SysDist-chat "SysDist-chat" ${chat-files}
+        INCLUDES "include-chat/" "include-common"
         EXT_INCLUDES "${SFML_dir}/include/" "${imgui_dir}" "${imgui-sfml_dir}" "breep/include"
         OPTIONS cxx executable static_runtime
 )
@@ -96,21 +99,32 @@ make_target(
 set_property(TARGET SysDist-chat PROPERTY CXX_STANDARD 17)
 set_property(TARGET SysDist-chat PROPERTY CXX_STANDARD_REQUIRED ON)
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdisabled-optimization -Wvector-operation-performance -Winvalid-pch \
-                            -Wunused -Wconversion -Wlogical-op -Wuninitialized -Wsuggest-final-types -Wdouble-promotion \
-                            -Wmissing-include-dirs -Wall -pedantic  -Wcast-qual -Wswitch-default -Wunreachable-code \
-                            -Wfloat-equal -Wundef -Wcast-align -Wcast-align -Wredundant-decls -Winit-self -Wshadow \
-                            -Wnon-virtual-dtor -Weffc++ -Wswitch-enum -Wmissing-declarations -fmessage-length=150 -W \
-                            -Wpointer-arith -Wwrite-strings -Wmissing-noreturn")
-    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=leak -fsanitize=undefined -g")
-    SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -O2")
-endif()
+# Setup SysDist-server
+get_files(
+        server-files
+        "${root_dir}/src-server"
+        "${root_dir}/include-server"
+        "${root_dir}/include-common"
+        OPTIONS recurse
+)
+
+make_target(
+        SysDist-server "SysDist-server" ${server-files}
+        INCLUDES "include-server/" "include-common"
+        EXT_INCLUDES "breep/include"
+        OPTIONS cxx executable static_runtime
+)
+
+set_property(TARGET SysDist-server PROPERTY CXX_STANDARD 17)
+set_property(TARGET SysDist-server PROPERTY CXX_STANDARD_REQUIRED ON)
+
 
 link_directories(${Boost_LIBRARY_DIRS})
 
 target_link_libraries(SysDist-chat ${OPENAL_LIBRARY} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
         ImGui-SFML sfml-window sfml-graphics sfml-system ${OPENGL_LIBRARY})
+
+target_link_libraries(SysDist-server ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 # Setup targets output, put exe and required SFML dll in the same folder
 target_set_output_directory(sfml-system "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")

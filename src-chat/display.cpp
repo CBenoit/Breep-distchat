@@ -68,7 +68,6 @@ display::gui::gui()
 	}
 	textinput_buffer.reserve(2048);
 
-	window.setVerticalSyncEnabled(true);
 	window.setFramerateLimit(60);
 
 	ImGui::SFML::Init(window);

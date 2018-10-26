@@ -26,6 +26,27 @@ int main(int, char*[]) {
 			data.network.send_object(std::make_pair(connection_state::accepted, peer_recap(data.source.id(), data.data.username)));
 		}
 	});
-	network.add_data_listener<connect_account>([](breep::tcp::netdata_wrapper<connect_account>& data) {
+
+	network.add_data_listener<connect_account>([&connected_peers_uuids, &existing_peers](breep::tcp::netdata_wrapper<connect_account>& data) {
+		if (connected_peers_uuids.count(data.source.id())) {
+			data.network.send_object(std::make_pair(connection_state::refused, peer_recap(data.source.id())));
+			return;
+		}
+		try {
+			peer_info& pi = existing_peers.at(data.data.username);
+			if (pi.password_matches(data.data.password)) {
+				data.network.send_object(std::make_pair(connection_state::accepted, peer_recap(data.data.username, data.source.id())));
+			} else {
+				data.network.send_object(std::make_pair(connection_state::refused, peer_recap{}));
+			}
+		} catch (const std::out_of_range& e) {
+			data.network.send_object(std::make_pair(connection_state::refused, peer_recap(data.data.username)));
+		}
 	});
+
+	network.add_disconnection_listener([&connected_peers_uuids](breep::tcp::network&, const breep::tcp::peer& p) {
+		connected_peers_uuids.erase(p.id());
+	});
+
+	network.sync_awake();
 }

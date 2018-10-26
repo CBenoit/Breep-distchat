@@ -19,7 +19,7 @@ public:
 
 private:
 	std::string username{};
-	boost::uuids::uuid uuid{};
+	boost::uuids::uuid uuid{boost::uuids::nil_uuid()};
 
 	BREEP_ENABLE_SERIALIZATION(peer_recap, username, uuid)
 };

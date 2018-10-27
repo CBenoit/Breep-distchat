@@ -127,12 +127,19 @@ void display::gui::update_frame() {
 		update_chat_frame();
 	};
 
-	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f}
-	, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AllowTabInput)) {
+	// input area
+	bool reclaim_focus = false;
+	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
+			ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AllowTabInput)) {
 		textinput_callback(std::string_view(textinput_buffer.data()));
 		textinput_buffer[0] = '\0';
+		reclaim_focus = true;
 	}
 
+	ImGui::SetItemDefaultFocus();
+	if (reclaim_focus) {
+	    ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
+	}
 }
 
 void display::gui::update_chat_frame() {

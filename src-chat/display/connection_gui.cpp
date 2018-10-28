@@ -81,7 +81,7 @@ std::optional<display::connection_fields> display::connection_gui::show() {
         ImGui::InputInt("Local port", &local_port);
         ImGui::InputText("Remote address", remote_addr, ADDR_MAX_SIZE);
         ImGui::InputInt("Remote port", &remote_port);
-        ImGui::InputText("Password", password, PASSWORD_MAX_SIZE);
+        ImGui::InputText("Password", password, PASSWORD_MAX_SIZE, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
 
         if (ImGui::Button("Connect")) {
             window.close();

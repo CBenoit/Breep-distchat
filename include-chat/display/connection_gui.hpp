@@ -1,3 +1,6 @@
+#ifndef SYSDIST_SERVER_CONNECTION_GUI_HPP
+#define SYSDIST_SERVER_CONNECTION_GUI_HPP
+
 /*************************************************************************************
  * MIT License                                                                       *
  *                                                                                   *
@@ -23,71 +26,36 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <list>
-#include <array>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <tuple>
+#include <boost/asio/ip/address.hpp>
+#include <optional>
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
-#include <display/connection_gui.hpp>
+namespace display {
+    struct connection_fields {
+        std::string username{};
+        std::string password{};
+        unsigned short local_port{};
+        boost::asio::ip::address_v4 remote_address{};
+        unsigned short remote_port{};
+    };
 
-#include "sound_def.hpp"
-#include "sound_sender.hpp"
-#include "flow_controller.hpp"
-#include "display/main_gui.hpp"
-#include "p2pchat.hpp"
+    class connection_gui {
+    public:
+        connection_gui();
+        ~connection_gui();
 
-BREEP_DECLARE_TYPE(std::string)
+        bool is_open() { return window.isOpen(); }
 
-void sender();
-void receiver();
+        std::optional<connection_fields> show();
 
-int main(int argc,char* argv[]) {
-    std::optional<display::connection_fields> fields = display::connection_gui().show();
+    private:
+        void update_frame();
 
-    std::unique_ptr<p2pchat> chat = nullptr;
-    if (fields.has_value()) {
-        chat = std::make_unique<p2pchat>(fields.value().local_port);
-    } else {
-        chat = std::make_unique<p2pchat>(1234);
-    }
-
-    display::main_gui gui;
-    audio_source::init();
-
-	std::unique_ptr<breep::tcp::peer> peer = nullptr;
-	chat->add_connection_callback([&peer, &gui](const breep::tcp::peer& lp) {
-		gui.system_message("Connected: " + lp.id_as_string());
-		peer = std::make_unique<breep::tcp::peer>(lp);
-	});
-
-	chat->add_disconnection_callback([&peer, &gui](const breep::tcp::peer& lp) {
-		gui.system_message("Disconnected: " + lp.id_as_string());
-		peer = nullptr;
-	});
-
-	chat->add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
-		gui.add_message(source.id_as_string(), data);
-	});
-
-	if (fields.has_value()) {
-        if (!chat->connect_to(fields.value().remote_address, fields.value().remote_port)) {
-            throw "Failed to connect.\n";
-        }
-    } else {
-	    chat->awake();
-	}
-
-	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
-		std::string s(v);
-		gui.add_message(chat->me().id_as_string().data(), s);
-		if (peer) {
-			chat->send_to(*peer, s);
-		}
-	});
-
-	while (gui.display());
-
-	return 0;
+        sf::RenderWindow window;
+        const int frame_flags;
+        sf::Clock clk;
+    };
 }
+
+#endif //SYSDIST_SERVER_CONNECTION_GUI_HPP

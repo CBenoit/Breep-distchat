@@ -1,3 +1,6 @@
+#ifndef SYSDIST_CHAT_UI_HPP
+#define SYSDIST_CHAT_UI_HPP
+
 /*************************************************************************************
  * MIT License                                                                       *
  *                                                                                   *
@@ -23,71 +26,66 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <list>
-#include <array>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <mutex>
+#include <functional>
+#include <imgui.h>
+#include <iostream>
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <breep/network/tcp.hpp>
-#include <audio_source.hpp>
-#include <display/connection_gui.hpp>
+namespace display {
+	enum class colors {
+		red = 0xDC143C,
+		blue = 0x00BFFF,
+		green = 0x00FF7F,
+		cyan = 0xE0FFFF,
+		pink = 0xFF69B4,
+		yellow = 0xFAFAD2,
+		white = 0xFFFFF0,
+		system = 0x6495ED
+	};
 
-#include "sound_def.hpp"
-#include "sound_sender.hpp"
-#include "flow_controller.hpp"
-#include "display/main_gui.hpp"
-#include "p2pchat.hpp"
+	bool is_instanciated();
 
-BREEP_DECLARE_TYPE(std::string)
+	class main_gui {
+	public:
+		main_gui();
+		~main_gui();
 
-void sender();
-void receiver();
+		/* return is_open */
+		bool display();
 
-int main(int argc,char* argv[]) {
-    std::optional<display::connection_fields> fields = display::connection_gui().show();
+		bool is_open() { return window.isOpen(); }
 
-    std::unique_ptr<p2pchat> chat = nullptr;
-    if (fields.has_value()) {
-        chat = std::make_unique<p2pchat>(fields.value().local_port);
-    } else {
-        chat = std::make_unique<p2pchat>(1234);
-    }
-
-    display::main_gui gui;
-    audio_source::init();
-
-	std::unique_ptr<breep::tcp::peer> peer = nullptr;
-	chat->add_connection_callback([&peer, &gui](const breep::tcp::peer& lp) {
-		gui.system_message("Connected: " + lp.id_as_string());
-		peer = std::make_unique<breep::tcp::peer>(lp);
-	});
-
-	chat->add_disconnection_callback([&peer, &gui](const breep::tcp::peer& lp) {
-		gui.system_message("Disconnected: " + lp.id_as_string());
-		peer = nullptr;
-	});
-
-	chat->add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
-		gui.add_message(source.id_as_string(), data);
-	});
-
-	if (fields.has_value()) {
-        if (!chat->connect_to(fields.value().remote_address, fields.value().remote_port)) {
-            throw "Failed to connect.\n";
-        }
-    } else {
-	    chat->awake();
-	}
-
-	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
-		std::string s(v);
-		gui.add_message(chat->me().id_as_string().data(), s);
-		if (peer) {
-			chat->send_to(*peer, s);
+		void system_message(std::string_view message) {
+			std::lock_guard lg(msg_mutex);
+			system_messages.emplace_back(system_messages.size() + messages.size(), message);
 		}
-	});
 
-	while (gui.display());
+		void add_message(std::string_view author, std::string_view msg) {
+			std::lock_guard lg(msg_mutex);
+			messages.emplace_back(system_messages.size() + messages.size(), author, msg);
+		}
 
-	return 0;
+		void set_textinput_callback(std::function<void(std::string_view)> tic) {
+			textinput_callback = std::move(tic);
+		}
+
+	private:
+		void update_frame();
+		void update_chat_frame();
+
+		sf::RenderWindow window;
+		sf::Clock clk;
+		const int frame_flags;
+
+		std::vector<std::tuple<int, std::string, std::string>> messages{};
+		std::vector<std::tuple<int, std::string>> system_messages{};
+		std::mutex msg_mutex{};
+
+		std::string textinput_buffer{};
+
+		std::function<void(std::string_view)> textinput_callback{};
+	};
 }
+
+#endif //SYSDIST_CHAT_UI_HPP

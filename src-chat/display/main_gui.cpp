@@ -1,11 +1,38 @@
+/*************************************************************************************
+ * MIT License                                                                       *
+ *                                                                                   *
+ * Copyright (c) 2018 TiWinDeTea                                                     *
+ *                                                                                   *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy      *
+ * of this software and associated documentation files (the "Software"), to deal     *
+ * in the Software without restriction, including without limitation the rights      *
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell         *
+ * copies of the Software, and to permit persons to whom the Software is             *
+ * furnished to do so, subject to the following conditions:                          *
+ *                                                                                   *
+ * The above copyright notice and this permission notice shall be included in all    *
+ * copies or substantial portions of the Software.                                   *
+ *                                                                                   *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR        *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,          *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE       *
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER            *
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,     *
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE     *
+ * SOFTWARE.                                                                         *
+ *                                                                                   *
+ *************************************************************************************/
 
-#include <display.hpp>
-#include <imgui.h>
 #include <atomic>
-#include <SFML/Window/Event.hpp>
-#include <imgui-SFML.h>
 #include <thread>
 #include <iostream>
+
+#include <SFML/Window/Event.hpp>
+#include <imgui-SFML.h>
+#include <imgui.h>
+
+#include "display/main_gui.hpp"
+#include "display/imgui_helper.hpp"
 
 namespace {
 	std::atomic<bool> instantiaded{false};
@@ -35,36 +62,18 @@ namespace {
 	}
 }
 
-namespace {
-#define IMGUIGUARD(x) struct x { \
-	template <typename... Args>\
-	explicit x(Args&&... args) : valid{ImGui::Begin##x(args...)}{}\
-	template <typename FuncT>\
-	void operator+(FuncT&& f) { if (valid) f();}\
-	~x() { if (valid) ImGui::End##x(); }\
-	bool valid;\
-}
-
-IMGUIGUARD(MenuBar);
-IMGUIGUARD(Menu);
-IMGUIGUARD(Child);
-
-#undef IMGUIGUARD
-#define Scoped(x) x + [&]()
-}
-
-bool display::is_intiantiated() {
+bool display::is_instanciated() {
 	return instantiaded;
 }
 
-display::gui::gui()
+display::main_gui::main_gui()
 		: window{sf::VideoMode(1280, 720), "Clonnect"}
 		, clk{}
 		, frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar}
 {
 	if (instantiaded.exchange(true)) {
-		throw std::logic_error("Tried to create more than one gui.");
+		throw std::logic_error("Tried to create more than one main_gui.");
 	}
 	textinput_buffer.reserve(2048);
 
@@ -74,12 +83,12 @@ display::gui::gui()
 	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
 }
 
-display::gui::~gui() {
+display::main_gui::~main_gui() {
 	ImGui::SFML::Shutdown();
 	instantiaded = false;
 }
 
-bool display::gui::display() {
+bool display::main_gui::display() {
 	if (!is_open()) {
 		return false;
 	}
@@ -110,13 +119,12 @@ bool display::gui::display() {
 	return true;
 }
 
-void display::gui::update_frame() {
-
+void display::main_gui::update_frame() {
 	Scoped(MenuBar()) {
 		Scoped(Menu("Options")) {
-//			Scoped(Menu("Color theme")) {
-//
-//			};
+			Scoped(Menu("Color theme")) {
+
+			};
 			if(ImGui::MenuItem("Quit")) {
 				window.close();
 			}
@@ -128,22 +136,15 @@ void display::gui::update_frame() {
 	};
 
 	// input area
-	bool reclaim_focus = false;
 	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
 			ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AllowTabInput)) {
 		textinput_callback(std::string_view(textinput_buffer.data()));
 		textinput_buffer[0] = '\0';
-		reclaim_focus = true;
-	}
-
-	ImGui::SetItemDefaultFocus();
-	if (reclaim_focus) {
-	    ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
+        ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
 	}
 }
 
-void display::gui::update_chat_frame() {
-
+void display::main_gui::update_chat_frame() {
 	auto print_message = [](const std::tuple<int, std::string, std::string>& tpl) {
 		ImGui::PushTextWrapPos();
 		ImGui::TextColored(author_color(std::get<1>(tpl)), "%s:", std::get<1>(tpl).data());
@@ -178,6 +179,3 @@ void display::gui::update_chat_frame() {
 		print_system_message(*sys_it++);
 	}
 }
-
-
-#undef Scoped

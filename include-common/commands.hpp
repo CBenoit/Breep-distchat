@@ -7,8 +7,8 @@
 
 // Send to server to create an account
 struct create_account {
-	std::string username;
-	std::string password;
+	std::string username{};
+	std::string password{};
 	BREEP_ENABLE_SERIALIZATION(create_account, username, password)
 };
 // answer (broadcasted):
@@ -22,8 +22,8 @@ struct create_account {
 
 // Send to server to try to connect
 struct connect_account {
-	std::string username;
-	std::string password;
+	std::string username{};
+	std::string password{};
 	BREEP_ENABLE_SERIALIZATION(connect_account, username, password)
 };
 // answer (broadcasted):

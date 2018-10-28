@@ -6,6 +6,8 @@
 #include <breep/util/serialization.hpp>
 #include <breep/util/type_traits.hpp>
 
+#include <uuid_serialize.hpp>
+
 class peer_recap {
 public:
 	peer_recap() = default;

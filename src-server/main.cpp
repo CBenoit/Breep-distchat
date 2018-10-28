@@ -5,19 +5,22 @@
 #include "commands.hpp"
 #include "peer_info.hpp"
 
-
 int main(int, char*[]) {
+	std::ios::sync_with_stdio(false);
+
 	constexpr auto scan_interval = std::chrono::seconds(15);
 
-	unsigned short chat_port;
+	uint16_t chat_port;
 	std::cout << "Chat server port: ";
 	std::cin >> chat_port;
 	breep::tcp::network chat_network(chat_port);
 
-	unsigned short auth_port;
+	uint16_t auth_port;
 	std::cout << "Authentication server port: ";
 	std::cin >> auth_port;
 	breep::tcp::network auth_network(auth_port);
+
+	auth_network.set_log_level(breep::log_level::debug);
 
 	std::unordered_map<std::string, peer_info> existing_peers;
 	std::mutex connected_peers_mutex;
@@ -27,6 +30,7 @@ int main(int, char*[]) {
 	std::unordered_map<boost::uuids::uuid, peer_recap, boost::hash<boost::uuids::uuid>> pending_peers;
 
 	auth_network.add_data_listener<create_account>([&](breep::tcp::netdata_wrapper<create_account>& data) {
+
 		connected_peers_mutex.lock();
 		const auto connected_count = connected_peers_uuids.count(data.source.id());
 		connected_peers_mutex.unlock();
@@ -56,6 +60,7 @@ int main(int, char*[]) {
 	});
 
 	auth_network.add_data_listener<connect_account>([&](breep::tcp::netdata_wrapper<connect_account>& data) {
+
 		connected_peers_mutex.lock();
 		const auto connected_count = connected_peers_uuids.count(data.source.id());
 		connected_peers_mutex.unlock();
@@ -65,7 +70,7 @@ int main(int, char*[]) {
 		pending_peers_mutex.unlock();
 
 		if (connected_count || pending_count) {
-			data.network.send_object(std::make_pair(connection_state::refused, peer_recap(data.source.id())));
+			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.source.id())));
 			return;
 		}
 		try {
@@ -94,6 +99,7 @@ int main(int, char*[]) {
 	});
 
 	chat_network.add_connection_listener([&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](breep::tcp::network&, const breep::tcp::peer& p) {
+
 		pending_peers_mutex.lock();
 		const auto count = pending_peers.erase(p.id());
 		pending_peers_mutex.unlock();
@@ -108,9 +114,8 @@ int main(int, char*[]) {
 	auth_network.awake();
 
 	while (chat_network.is_running() && auth_network.is_running()) {
-		std::this_thread::sleep_for(scan_interval);
 
-		std::lock_guard lg(pending_peers_mutex);
+		pending_peers_mutex.lock();
 		auto it = pending_peers.begin();
 		auto end = pending_peers.end();
 
@@ -125,5 +130,8 @@ int main(int, char*[]) {
 				pending_peers.erase(curr);
 			}
 		}
+		pending_peers_mutex.unlock();
+
+		std::this_thread::sleep_for(scan_interval);
 	}
 }

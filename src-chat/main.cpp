@@ -38,20 +38,20 @@
 #include "display/main_gui.hpp"
 #include "p2pchat.hpp"
 
+#include "connection_fields.hpp"
+
 BREEP_DECLARE_TYPE(std::string)
 
 void sender();
 void receiver();
 
 int main(int argc,char* argv[]) {
-    std::optional<display::connection_fields> fields = display::connection_gui().show();
+    connection_fields fields;
+    for (display::connection_gui cgui ; !fields ; fields = cgui.show(fields)) {
+    }
 
     std::unique_ptr<p2pchat> chat = nullptr;
-    if (fields.has_value()) {
-        chat = std::make_unique<p2pchat>(fields.value().local_port);
-    } else {
-        chat = std::make_unique<p2pchat>(1234);
-    }
+    chat = std::make_unique<p2pchat>(*fields.local_port);
 
     display::main_gui gui;
     audio_source::init();
@@ -71,13 +71,9 @@ int main(int argc,char* argv[]) {
 		gui.add_message(source.id_as_string(), data);
 	});
 
-	if (fields.has_value()) {
-        if (!chat->connect_to(fields.value().remote_address, fields.value().remote_port)) {
-            throw "Failed to connect.\n";
-        }
-    } else {
-	    chat->awake();
-	}
+    if (!chat->connect_to(fields)) {
+        throw "Failed to connect.\n";
+    }
 
 	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
 		std::string s(v);

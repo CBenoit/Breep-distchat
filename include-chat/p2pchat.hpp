@@ -29,7 +29,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <breep/network/tcp.hpp>
 #include <utility>
+
 #include "sound_sender.hpp"
+#include "connection_fields.hpp"
 
 class p2pchat {
 
@@ -46,6 +48,8 @@ public:
 	void awake();
 
 	bool connect_to(boost::asio::ip::address_v4, unsigned short forward_port);
+
+	bool connect_to(const connection_fields& cfields);
 
 	void send_voice(bool should_send = true);
 	void mute_sound_input(bool muted);

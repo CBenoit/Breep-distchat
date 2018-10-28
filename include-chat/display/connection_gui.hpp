@@ -31,14 +31,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <optional>
 
+struct connection_fields;
+
 namespace display {
-    struct connection_fields {
-        std::string username{};
-        std::string password{};
-        unsigned short local_port{};
-        boost::asio::ip::address_v4 remote_address{};
-        unsigned short remote_port{};
-    };
 
     class connection_gui {
     public:
@@ -47,7 +42,7 @@ namespace display {
 
         bool is_open() { return window.isOpen(); }
 
-        std::optional<connection_fields> show();
+        connection_fields show(const connection_fields& current);
 
     private:
         void update_frame();

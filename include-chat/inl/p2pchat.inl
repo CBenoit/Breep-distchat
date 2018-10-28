@@ -26,6 +26,7 @@
 #include <p2pchat.hpp>
 #include <sound_def.hpp>
 #include <audio_source.hpp>
+#include <commands.hpp>
 
 #include "p2pchat.hpp"
 
@@ -88,6 +89,7 @@ inline void p2pchat::local_sound_input() {
 
 inline p2pchat::~p2pchat() {
 	should_quit = true;
+	dual_network.disconnect();
 	if (sound_sender_thread.joinable()) {
 		sound_sender_thread.join();
 	}

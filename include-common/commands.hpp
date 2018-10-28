@@ -3,8 +3,6 @@
 
 #include <breep/util/serialization.hpp>
 
-#include "peer_recap.hpp"
-
 // Send to server to create an account
 struct create_account {
 	std::string username{};
@@ -18,8 +16,8 @@ struct create_account {
 //     if peer_recap.id().is_nil() is false, then the source's id is already mapped to a connected peer
 //
 // answer:
-// std::pair<connection_state, unsigned short>
-// with connection_state == accepted and unsigned short = chat port, if the account creation was accepted. You are logged in for a short time.
+// std::pair<connection_state, uint16_t>
+// with connection_state == accepted and uint16_t = chat port, if the account creation was accepted. You are logged in for a short time.
 //
 
 
@@ -37,7 +35,7 @@ struct connect_account {
 //     if peer_recap.name() is empty and peer_recap.id().is_nil() is true, then the password is not correct
 //
 // answer:
-// connection_state
+// std::pair<connection_state, unsigned short>
 // with connection_state == accepted and unsigned short = chat port, if the account creation was accepted. You are logged in for a short time.
 //
 

@@ -18,8 +18,8 @@ struct create_account {
 //     if peer_recap.id().is_nil() is false, then the source's id is already mapped to a connected peer
 //
 // answer:
-// connection_state
-// with value accepted, if the account creation was accepted. You are logged in. TODO: for n seconds
+// std::pair<connection_state, unsigned short>
+// with connection_state == accepted and unsigned short = chat port, if the account creation was accepted. You are logged in for a short time.
 //
 
 
@@ -38,7 +38,7 @@ struct connect_account {
 //
 // answer:
 // connection_state
-// with value accepted, if the connection was successful. You are logged in. TODO: for n seconds
+// with connection_state == accepted and unsigned short = chat port, if the account creation was accepted. You are logged in for a short time.
 //
 
 enum class connection_state : char {

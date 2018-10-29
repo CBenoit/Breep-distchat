@@ -13,13 +13,19 @@
 class peer_recap {
 public:
 	peer_recap() = default;
-	peer_recap(std::string name, const boost::uuids::uuid& id = boost::uuids::nil_uuid(), connection_state st = connection_state::unknown_error)
+
+	peer_recap(std::string name, const boost::uuids::uuid& id = boost::uuids::nil_uuid(),
+	           connection_state st = connection_state::unknown_error)
 			: peer_recap(id, name, st) {}
-	peer_recap(const boost::uuids::uuid& id, std::string name = "", connection_state st = connection_state::unknown_error)
+
+	peer_recap(const boost::uuids::uuid& id, std::string name = "",
+	           connection_state st = connection_state::unknown_error)
 			: username(std::move(name)), uuid(id), state(st) {}
 
 	const std::string& name() const noexcept { return username; }
+
 	const boost::uuids::uuid& id() const noexcept { return uuid; }
+
 	bool should_accept() const noexcept { return state == connection_state::accepted; }
 
 	void set_state(connection_state st) { state = st; }

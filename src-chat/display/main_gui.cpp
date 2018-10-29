@@ -52,8 +52,8 @@ namespace {
 	ImVec4 imgui_color(display::colors color) {
 		return {
 				static_cast<float>(static_cast<unsigned int>(color) >> 16u & 0xFF) / 255.f,
-				static_cast<float>(static_cast<unsigned int>(color) >> 8u  & 0xFF) / 255.f,
-				static_cast<float>(static_cast<unsigned int>(color) >> 0u  & 0xFF) / 255.f,
+				static_cast<float>(static_cast<unsigned int>(color) >> 8u & 0xFF) / 255.f,
+				static_cast<float>(static_cast<unsigned int>(color) >> 0u & 0xFF) / 255.f,
 				1.f
 		};
 	}
@@ -68,11 +68,9 @@ bool display::is_instanciated() {
 }
 
 display::main_gui::main_gui()
-		: window{sf::VideoMode(1280, 720), "Clonnect"}
-		, clk{}
-		, frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar}
-{
+		: window{sf::VideoMode(1280, 720), "Clonnect"}, clk{},
+		  frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar} {
 	if (instantiaded.exchange(true)) {
 		throw std::logic_error("Tried to create more than one main_gui.");
 	}
@@ -112,7 +110,8 @@ bool display::main_gui::display() {
 			return false;
 		}
 
-		if ((ev.type != sf::Event::KeyPressed && ev.type != sf::Event::KeyReleased) || ev.key.code != sf::Keyboard::Unknown)
+		if ((ev.type != sf::Event::KeyPressed && ev.type != sf::Event::KeyReleased) ||
+		    ev.key.code != sf::Keyboard::Unknown)
 			ImGui::SFML::ProcessEvent(ev);
 	}
 
@@ -148,69 +147,72 @@ void display::main_gui::update_frame() {
 //				theme_entry("Microsoft Light", theme::MicrosoftLight);
 				theme_entry("Unity Engine 4", theme::UE4);
 			};
-			if(ImGui::MenuItem("Quit")) {
+			if (ImGui::MenuItem("Quit")) {
 				window.close();
 			}
 		};
 
 		Scoped(Menu("Users")) {
-            for (auto &&item : uuids_names) {
-                if (ImGui::MenuItem(item.second.data())) {
-                    focused_uuid = item.first;
-                }
-            }
+			std::lock_guard lg{uuids_mutex};
+			for (auto&& item : uuids_names) {
+				if (ImGui::MenuItem(item.second.data())) {
+					focused_uuid = item.first;
+				}
+			}
 		};
 	};
 
-	Scoped(Child(ImGui::GetID("chat"), ImVec2(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y - 60)))) {
+	Scoped(Child(ImGui::GetID("chat"),
+	             ImVec2(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y - 60)))) {
 		update_chat_frame();
 	};
 
 	// input area
 	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
-			ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AllowTabInput)) {
+	                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue |
+	                              ImGuiInputTextFlags_AllowTabInput)) {
 		textinput_callback(std::string_view(textinput_buffer.data()));
 		textinput_buffer[0] = '\0';
-        ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
+		ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
 	}
 }
 
 void display::main_gui::update_chat_frame() {
-    auto msgs = messages.find(focused_uuid);
-    auto sys_msgs = sys_messages.find(focused_uuid);
-    if (msgs != messages.end() && sys_msgs != sys_messages.end()) {
-        auto print_message = [](const message &msg) {
-            ImGui::PushTextWrapPos();
-            ImGui::TextColored(author_color(msg.author), "%s:", msg.author.data());
-            ImGui::SameLine();
-            ImGui::TextColored(imgui_color(colors::white), "%s", msg.content.data());
-            ImGui::PopTextWrapPos();
-        };
+	auto msgs = messages.find(focused_uuid);
+	auto sys_msgs = sys_messages.find(focused_uuid);
+	if (msgs != messages.end() && sys_msgs != sys_messages.end()) {
+		auto print_message = [](const message& msg) {
+			ImGui::PushTextWrapPos();
+			ImGui::TextColored(author_color(msg.author), "%s:", msg.author.data());
+			ImGui::SameLine();
+			ImGui::TextColored(imgui_color(colors::white), "%s", msg.content.data());
+			ImGui::PopTextWrapPos();
+		};
 
-        auto print_system_message = [](const sys_message &msg) {
-            ImGui::PushTextWrapPos();
-            ImGui::TextColored(imgui_color(colors::system), "%s", msg.content.data());
-            ImGui::PopTextWrapPos();
-        };
+		auto print_system_message = [](const sys_message& msg) {
+			ImGui::PushTextWrapPos();
+			ImGui::TextColored(imgui_color(colors::system), "%s", msg.content.data());
+			ImGui::PopTextWrapPos();
+		};
 
-        std::lock_guard lg(msg_mutex);
-        auto msg_it = msgs->second.cbegin();
-        auto sys_it = sys_msgs->second.cbegin();
+		std::lock_guard lg(msg_mutex);
+		auto msg_it = msgs->second.cbegin();
+		auto sys_it = sys_msgs->second.cbegin();
 
-        while (msg_it != msgs->second.cend() && sys_it != sys_msgs->second.cend()) {
-            if (msg_it->position < sys_it->position) {
-                print_message(*msg_it++);
-            } else {
-                print_system_message(*sys_it++);
-            }
-        }
+		while (msg_it != msgs->second.cend() && sys_it != sys_msgs->second.cend()) {
+			if (msg_it->position < sys_it->position) {
+				print_message(*msg_it++);
+			} else {
+				print_system_message(*sys_it++);
+			}
+		}
 
-        while (msg_it != msgs->second.cend()) {
-            print_message(*msg_it++);
-        }
+		while (msg_it != msgs->second.cend()) {
+			print_message(*msg_it++);
+		}
 
-        while (sys_it != sys_msgs->second.cend()) {
-            print_system_message(*sys_it++);
-        }
-    }
+		while (sys_it != sys_msgs->second.cend()) {
+			print_system_message(*sys_it++);
+		}
+	}
 }

@@ -34,23 +34,23 @@
 struct connection_fields;
 
 namespace display {
+	class connection_gui {
+	public:
+		connection_gui();
 
-    class connection_gui {
-    public:
-        connection_gui();
-        ~connection_gui();
+		~connection_gui();
 
-        bool is_open() { return window.isOpen(); }
+		bool is_open() { return window.isOpen(); }
 
-        connection_fields show(const connection_fields& current);
+		connection_fields show(const connection_fields& current);
 
-    private:
-        void update_frame();
+	private:
+		void update_frame();
 
-        sf::RenderWindow window;
-        const int frame_flags;
-        sf::Clock clk;
-    };
+		sf::RenderWindow window;
+		const int frame_flags;
+		sf::Clock clk;
+	};
 }
 
 #endif //SYSDIST_SERVER_CONNECTION_GUI_HPP

@@ -16,7 +16,7 @@ connection_state p2pchat::connect_to(const connection_fields& cfields) {
 	});
 
 	if (!dual_network.connect(*cfields.remote_address, *cfields.remote_port)) {
-		return connection_state ::unknown_error;
+		return connection_state::unknown_error;
 	}
 
 	if (*cfields.account_creation) {

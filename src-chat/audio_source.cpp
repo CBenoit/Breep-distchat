@@ -55,8 +55,11 @@ namespace {
 		}
 
 		audio_source_life_manager(const audio_source_life_manager&) = delete;
+
 		audio_source_life_manager& operator=(const audio_source_life_manager&) = delete;
+
 		audio_source_life_manager(audio_source_life_manager&&) = delete;
+
 		audio_source_life_manager& operator=(audio_source_life_manager&&) = delete;
 
 		~audio_source_life_manager() {
@@ -72,8 +75,8 @@ namespace {
 			alcCloseDevice(audioDevice);
 		}
 
-		ALCdevice * audioDevice{};
-		ALCcontext * audioContext{};
+		ALCdevice* audioDevice{};
+		ALCcontext* audioContext{};
 		ALuint audioBuffer[16]{}, audioSource{};
 		std::list<ALuint> bufferQueue{}; // A quick and dirty queue of buffer objects
 	};
@@ -100,7 +103,7 @@ void audio_source::play(const sound_buffer_t& buffer) noexcept {
 		if (availBuffers > 0) {
 
 			alSourceUnqueueBuffers(aslm->audioSource, availBuffers, buffHolder);
-			for (int ii = 0 ; ii < availBuffers ; ++ii) {
+			for (int ii = 0; ii < availBuffers; ++ii) {
 				// Push the recovered buffers back on the queue
 				aslm->bufferQueue.push_back(buffHolder[ii]);
 			}

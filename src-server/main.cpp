@@ -5,7 +5,7 @@
 #include "commands.hpp"
 #include "peer_info.hpp"
 
-int main(int, char*[]) {
+int main(int, char *[]) {
 	std::ios::sync_with_stdio(false);
 
 	constexpr auto scan_interval = std::chrono::seconds(15);
@@ -47,7 +47,8 @@ int main(int, char*[]) {
 			data.network.send_object_to(data.source, connection_results::user_already_exists);
 
 		} else {
-			existing_peers.emplace(data.data.username, peer_info{data.source.id(), data.data.username, data.data.password});
+			existing_peers.emplace(data.data.username,
+			                       peer_info{data.source.id(), data.data.username, data.data.password});
 
 			auto peer = peer_recap(data.source.id(), data.data.username, connection_state::accepted);
 			chat_network.send_object(peer);
@@ -94,22 +95,25 @@ int main(int, char*[]) {
 		}
 	});
 
-	chat_network.add_disconnection_listener([&connected_peers_uuids, &connected_peers_mutex](breep::tcp::network&, const breep::tcp::peer& p) {
-		std::lock_guard lg(connected_peers_mutex);
-		connected_peers_uuids.erase(p.id());
-	});
+	chat_network.add_disconnection_listener(
+			[&connected_peers_uuids, &connected_peers_mutex](breep::tcp::network&, const breep::tcp::peer& p) {
+				std::lock_guard lg(connected_peers_mutex);
+				connected_peers_uuids.erase(p.id());
+			});
 
-	chat_network.add_connection_listener([&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](breep::tcp::network& n, const breep::tcp::peer& p) {
+	chat_network.add_connection_listener(
+			[&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](
+					breep::tcp::network& n, const breep::tcp::peer& p) {
 
-		connected_peers_mutex.lock();
-		for (auto&& peers_pair : connected_peers_uuids) {
-			n.send_object_to(p, peers_pair.second);
-		}
-		pending_peers_mutex.lock();
-		connected_peers_uuids.insert(pending_peers.extract(p.id()));
-		pending_peers_mutex.unlock();
-		connected_peers_mutex.unlock();
-	});
+				connected_peers_mutex.lock();
+				for (auto&& peers_pair : connected_peers_uuids) {
+					n.send_object_to(p, peers_pair.second);
+				}
+				pending_peers_mutex.lock();
+				connected_peers_uuids.insert(pending_peers.extract(p.id()));
+				pending_peers_mutex.unlock();
+				connected_peers_mutex.unlock();
+			});
 
 	chat_network.set_connection_predicate([&pending_peers, &pending_peers_mutex](const breep::tcp::peer& p) {
 		std::lock_guard ls(pending_peers_mutex);

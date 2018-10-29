@@ -45,73 +45,74 @@
 BREEP_DECLARE_TYPE(std::string)
 
 void sender();
+
 void receiver();
 
-int main(int argc,char* argv[]) {
-    connection_fields fields;
-    for (display::connection_gui cgui ; !fields ; fields = cgui.show(fields)) {}
+int main(int argc, char* argv[]) {
+	connection_fields fields;
+	for (display::connection_gui cgui; !fields; fields = cgui.show(fields)) {}
 
-    p2pchat chat{*fields.local_port};
+	p2pchat chat{*fields.local_port};
 
-    display::main_gui gui;
-    audio_source::init();
+	display::main_gui gui;
+	audio_source::init();
 
-    std::unordered_map<boost::uuids::uuid, breep::tcp::peer, boost::hash<boost::uuids::uuid>> peers{};
+	std::unordered_map<boost::uuids::uuid, breep::tcp::peer, boost::hash<boost::uuids::uuid>> peers{};
 	chat.add_connection_callback([&peers, &gui](const breep::tcp::peer& lp) {
-		gui.system_message("Connected: " + lp.id_as_string());
+		gui.system_message(lp.id(), "Connected: " + lp.id_as_string());
 		peers.emplace(lp.id(), lp);
 	});
 
 	chat.add_disconnection_callback([&peers, &gui](const breep::tcp::peer& lp) {
-		gui.system_message("Disconnected: " + lp.id_as_string());
-        gui.remove_user(lp.id());
-        peers.erase(lp.id());
+		gui.system_message(lp.id(), "Disconnected: " + lp.id_as_string());
+		gui.remove_user(lp.id());
+		peers.erase(lp.id());
 	});
 
 	chat.add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
-		gui.add_message(source.id_as_string(), data);
+		gui.add_message(source.id(), source.id_as_string(), data);
 	});
-
-    if (connection_state st = chat.connect_to(fields) ; st != connection_state::accepted) {
-        std::cout << "Failed to connect.\n";
-        switch (st) {
-            case connection_state::no_such_account:
-                std::cout << "Reason: no_such_account\n";
-                break;
-            case connection_state::bad_password:
-                std::cout << "Reason: bad_password\n";
-                break;
-            case connection_state::user_already_exists:
-                std::cout << "Reason: user_already_exists\n";
-                break;
-            case connection_state::user_already_connected:
-                std::cout << "Reason: user_already_connected\n";
-                break;
-            case connection_state::unknown_error:
-                [[fallthrough]];
-            default:
-                std::cout << "Reason: unknown_error\n";
-                break;
-        }
-        return 1;
-    }
 
 	chat.add_callback<peer_recap>([&gui](const peer_recap& peer_recap, const breep::tcp::peer& source) {
 		gui.add_user(source.id(), peer_recap.name());
 	});
 
+	if (connection_state st = chat.connect_to(fields); st != connection_state::accepted) {
+		std::cout << "Failed to connect.\n";
+		switch (st) {
+			case connection_state::no_such_account:
+				std::cout << "Reason: no_such_account\n";
+				break;
+			case connection_state::bad_password:
+				std::cout << "Reason: bad_password\n";
+				break;
+			case connection_state::user_already_exists:
+				std::cout << "Reason: user_already_exists\n";
+				break;
+			case connection_state::user_already_connected:
+				std::cout << "Reason: user_already_connected\n";
+				break;
+			case connection_state::unknown_error:
+				[[fallthrough]];
+			default:
+				std::cout << "Reason: unknown_error\n";
+				break;
+		}
+		return 1;
+	}
+
 	gui.set_textinput_callback([&gui, &chat, &peers](std::string_view v) {
 		std::string s(v);
-		gui.add_message(chat.me().id_as_string().data(), s);
+		gui.add_message(gui.get_focused_uuid(), chat.me().id_as_string().data(), s);
 
 		auto it = peers.find(gui.get_focused_uuid());
 		if (it != peers.end()) {
-            chat.send_to(it->second, s);
+			chat.send_to(it->second, s);
 		}
 	});
 
-    // TODO: add connection predicate to refuse not acknowledged users
-    // TODO: vérifier que le mec qui envoie le peer recap c'est le serveur
+	// TODO: add connection predicate to refuse not acknowledged users
+	// TODO: vérifier que le mec qui envoie le peer recap c'est le serveur
 
 	while (gui.display());
 

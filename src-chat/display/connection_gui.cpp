@@ -33,13 +33,13 @@
 #include "connection_fields.hpp"
 
 namespace default_values {
-    namespace {
-        constexpr unsigned short remote_port = 1234;
-        constexpr unsigned short local_port = remote_port + 1;
-        constexpr char user_name[] = "";
-        constexpr char password[] = "";
-        constexpr char addr[] = "127.0.0.1";
-    }
+	namespace {
+		constexpr unsigned short remote_port = 1234;
+		constexpr unsigned short local_port = remote_port + 1;
+		constexpr char user_name[] = "";
+		constexpr char password[] = "";
+		constexpr char addr[] = "127.0.0.1";
+	}
 }
 namespace max_sizes {
 	namespace {
@@ -51,17 +51,18 @@ namespace max_sizes {
 
 namespace {
 	template<auto N, auto M>
-	void test_and_set(char (&field)[N], const char (&char_value)[M], const std::optional<std::string>& str_value) {
+	void test_and_set(char (& field)[N], const char (& char_value)[M], const std::optional<std::string>& str_value) {
 		static_assert(N >= M);
 		if (str_value) {
-			std::copy(str_value->begin(),str_value->end(), field);
+			std::copy(str_value->begin(), str_value->end(), field);
 		} else {
 			std::copy(char_value, char_value + M, field);
 		}
 	}
 
 	template<auto N, auto M>
-	void test_and_set(char (&field)[N], const char (&char_value)[M], const std::optional<boost::asio::ip::address_v4>& addr_value) {
+	void test_and_set(char (& field)[N], const char (& char_value)[M],
+	                  const std::optional<boost::asio::ip::address_v4>& addr_value) {
 		static_assert(N >= M);
 		if (addr_value) {
 			std::string string_addr = addr_value->to_string();
@@ -94,11 +95,9 @@ namespace {
 }
 
 display::connection_gui::connection_gui()
-		: window{sf::VideoMode(400, 160), "Clonnect login"}
-		, frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings}
-		, clk{}
-{
+		: window{sf::VideoMode(400, 160), "Clonnect login"},
+		  frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings}, clk{} {
 	window.setFramerateLimit(60);
 
 	ImGui::SFML::Init(window);
@@ -115,73 +114,79 @@ display::connection_gui::~connection_gui() {
 
 connection_fields display::connection_gui::show(const connection_fields& fields) {
 
-    using namespace std::string_literals;
-    bool keep_looping = true;
+	using namespace std::string_literals;
+	bool keep_looping = true;
 
-    int local_port = fields.local_port ? fields.local_port.value() : default_values::local_port;
-    int remote_port = fields.remote_port ? fields.remote_port.value() : default_values::remote_port;
+	int local_port = fields.local_port ? fields.local_port.value() : default_values::local_port;
+	int remote_port = fields.remote_port ? fields.remote_port.value() : default_values::remote_port;
 
-    char username[max_sizes::username];
-    test_and_set(username, default_values::user_name, fields.username);
+	char username[max_sizes::username];
+	test_and_set(username, default_values::user_name, fields.username);
 
-    char password[max_sizes::password];
-    test_and_set(password, default_values::password, fields.password);
+	char password[max_sizes::password];
+	test_and_set(password, default_values::password, fields.password);
 
-    char remote_addr[max_sizes::addr];
-    test_and_set(remote_addr, default_values::addr, fields.remote_address);
+	char remote_addr[max_sizes::addr];
+	test_and_set(remote_addr, default_values::addr, fields.remote_address);
 
 	connection_fields ans;
 
-    do {
-        sf::Event ev{};
-        while (window.pollEvent(ev)) {
-            if (ev.type == sf::Event::Closed) {
-            	std::exit(1);
-            }
+	do {
+		sf::Event ev{};
+		while (window.pollEvent(ev)) {
+			if (ev.type == sf::Event::Closed) {
+				std::exit(1);
+			}
 
-            if ((ev.type != sf::Event::KeyPressed && ev.type != sf::Event::KeyReleased) ||
-                ev.key.code != sf::Keyboard::Unknown)
-                ImGui::SFML::ProcessEvent(ev);
-        }
+			if ((ev.type != sf::Event::KeyPressed && ev.type != sf::Event::KeyReleased) ||
+			    ev.key.code != sf::Keyboard::Unknown)
+				ImGui::SFML::ProcessEvent(ev);
+		}
 
-        ImGui::SFML::Update(window, clk.restart());
+		ImGui::SFML::Update(window, clk.restart());
 
-        ImGui::SetNextWindowSize(
-                ImVec2{static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-        ImGui::SetNextWindowPos({});
-        ImGui::Begin("Main", nullptr, frame_flags);
+		ImGui::SetNextWindowSize(
+				ImVec2{static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+		ImGui::SetNextWindowPos({});
+		ImGui::Begin("Main", nullptr, frame_flags);
 
-        // TODO HERE
-        ImGui::Text("      Username: "); ImGui::SameLine();
-        ImGui::InputText("##Username", username, std::size(username));
+		// TODO HERE
+		ImGui::Text("      Username: ");
+		ImGui::SameLine();
+		ImGui::InputText("##Username", username, std::size(username));
 
-        ImGui::Text("      Password: "); ImGui::SameLine();
-	    ImGui::InputText("##Password", password, std::size(password), ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
+		ImGui::Text("      Password: ");
+		ImGui::SameLine();
+		ImGui::InputText("##Password", password, std::size(password),
+		                 ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
 
-	    ImGui::Text("Remote address: "); ImGui::SameLine();
-	    ImGui::InputText("##Remote address", remote_addr, std::size(remote_addr));
+		ImGui::Text("Remote address: ");
+		ImGui::SameLine();
+		ImGui::InputText("##Remote address", remote_addr, std::size(remote_addr));
 
-	    ImGui::Text("   Remote port: "); ImGui::SameLine();
-	    ImGui::InputInt("##Remote port", &remote_port, 0, 0);
+		ImGui::Text("   Remote port: ");
+		ImGui::SameLine();
+		ImGui::InputInt("##Remote port", &remote_port, 0, 0);
 
-	    ImGui::Text("    Local port: "); ImGui::SameLine();
-	    ImGui::InputInt("##Local port", &local_port, 0, 0);
+		ImGui::Text("    Local port: ");
+		ImGui::SameLine();
+		ImGui::InputInt("##Local port", &local_port, 0, 0);
 
-        if (ImGui::Button("Connect")) {
-        	ans.account_creation = false;
-        	keep_looping = false;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Create account")) {
-        	ans.account_creation = true;
-        	keep_looping = false;
-        }
+		if (ImGui::Button("Connect")) {
+			ans.account_creation = false;
+			keep_looping = false;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Create account")) {
+			ans.account_creation = true;
+			keep_looping = false;
+		}
 
-        ImGui::End();
-        window.clear();
-        ImGui::SFML::Render(window);
-        window.display();
-    } while (keep_looping);
+		ImGui::End();
+		window.clear();
+		ImGui::SFML::Render(window);
+		window.display();
+	} while (keep_looping);
 
 	test_size_and_set(username, ans.username);
 	test_size_and_set(password, ans.password);
@@ -189,5 +194,5 @@ connection_fields display::connection_gui::show(const connection_fields& fields)
 	test_if_port_and_set(local_port, ans.local_port);
 	test_if_port_and_set(remote_port, ans.remote_port);
 
-    return ans;
+	return ans;
 }

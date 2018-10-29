@@ -4,10 +4,7 @@
 #include "peer_info.hpp"
 
 peer_info::peer_info(const boost::uuids::uuid& id, std::string username, const std::string& password)
-	: uuid(id)
-	, password_hash(hasher(password))
-	, username(std::move(username))
-{
+		: uuid(id), password_hash(hasher(password)), username(std::move(username)) {
 
 }
 

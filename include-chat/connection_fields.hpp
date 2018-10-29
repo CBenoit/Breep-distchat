@@ -7,7 +7,7 @@
 
 struct connection_fields {
 
-	explicit operator bool () const {
+	explicit operator bool() const {
 		return account_creation && username && password && local_port && remote_address && remote_port;
 	}
 

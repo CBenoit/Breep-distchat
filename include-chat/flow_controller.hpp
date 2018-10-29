@@ -30,8 +30,8 @@
 #include <utility>
 #include <exception>
 
-#define CAT_IMPL(x,y) x##y
-#define CAT(x,y) CAT_IMPL(x,y)
+#define CAT_IMPL(x, y) x##y
+#define CAT(x, y) CAT_IMPL(x,y)
 
 #ifdef __COUNTER__
 #define ANONYMOUS(x) CAT(CAT(CAT(CAT(x,__),__LINE__),__),__COUNTER__)
@@ -41,7 +41,7 @@
 
 namespace details {
 
-	template <typename T>
+	template<typename T>
 	struct always_do {
 
 		always_do(T&& t) : var(std::forward<T>(t)) {}
@@ -53,7 +53,7 @@ namespace details {
 		T var;
 	};
 
-	template <typename T, bool OnExcept>
+	template<typename T, bool OnExcept>
 	struct sometimes_do {
 		sometimes_do(T&& t) : var(std::forward<T>(t)), exception_count(std::uncaught_exceptions()) {}
 
@@ -73,21 +73,24 @@ namespace details {
 		int exception_count;
 	};
 
-	struct always_do_struct {};
-	struct except_do_struct {};
-	struct noexcept_do_struct {};
+	struct always_do_struct {
+	};
+	struct except_do_struct {
+	};
+	struct noexcept_do_struct {
+	};
 
-	template <typename T>
+	template<typename T>
 	always_do<T> operator+(always_do_struct, T&& f) {
 		return {std::forward<T>(f)};
 	}
 
-	template <typename T>
+	template<typename T>
 	sometimes_do<T, true> operator+(except_do_struct, T&& f) {
 		return {std::forward<T>(f)};
 	}
 
-	template <typename T>
+	template<typename T>
 	sometimes_do<T, false> operator+(noexcept_do_struct, T&& f) {
 		return {std::forward<T>(f)};
 	}

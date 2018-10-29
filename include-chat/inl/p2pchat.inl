@@ -31,9 +31,7 @@
 #include "p2pchat.hpp"
 
 inline p2pchat::p2pchat(unsigned short local_port)
-		: dual_network{local_port}
-		, sound_sender_thread{[this](){local_sound_input();}}
-{
+		: dual_network{local_port}, sound_sender_thread{[this]() { local_sound_input(); }} {
 	dual_network.set_log_level(breep::log_level::debug);
 	dual_network.add_data_listener<sound_buffer_t>([this](auto& value) { network_sound_input_callback(value); });
 	dual_network.add_connection_listener([this](auto&, const breep::tcp::peer& p) {
@@ -50,9 +48,8 @@ inline p2pchat::p2pchat(unsigned short local_port)
 }
 
 inline p2pchat::p2pchat(unsigned short local_port, boost::asio::ip::address_v4 connection_address,
-                                 unsigned short forward_port)
-		: p2pchat(local_port)
-{
+                        unsigned short forward_port)
+		: p2pchat(local_port) {
 	dual_network.connect(connection_address, forward_port);
 }
 
@@ -102,8 +99,8 @@ void p2pchat::send_to(const breep::tcp::peer& target, const T& value) {
 }
 
 template<typename T>
-inline p2pchat::callback_id p2pchat::add_callback(callback<T> cb) {
-	return dual_network.add_data_listener<T>([c = std::move(cb)] (breep::tcp::netdata_wrapper<T>& value) {
+inline p2pchat::callback_id p2pchat::add_callback(callback <T> cb) {
+	return dual_network.add_data_listener<T>([c = std::move(cb)](breep::tcp::netdata_wrapper<T>& value) {
 		c(value.data, value.source);
 	});
 }

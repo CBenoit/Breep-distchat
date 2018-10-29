@@ -39,13 +39,14 @@ class p2pchat {
 
 public:
 
-	template <typename T>
+	template<typename T>
 	using callback = std::function<void(const T&, const breep::tcp::peer&)>;
 	using callback_id = breep::type_listener_id;
 	using connection_callback = std::function<void(const breep::tcp::peer&)>;
 	using connection_callback_id = breep::listener_id;
 
 	explicit p2pchat(unsigned short local_port);
+
 	p2pchat(unsigned short local_port, boost::asio::ip::address_v4 connection_address, unsigned short forward_port);
 
 	void awake();
@@ -53,11 +54,15 @@ public:
 	connection_state connect_to(const connection_fields& cfields);
 
 	void send_voice(bool should_send = true);
+
 	void mute_sound_input(bool muted);
 
 	void add_sound_target(const breep::tcp::peer& p);
+
 	void add_sound_target(const boost::uuids::uuid& p);
+
 	void remove_sound_target(const breep::tcp::peer& p);
+
 	void remove_sound_target(const boost::uuids::uuid& p);
 
 	template<typename T>
@@ -88,6 +93,7 @@ public:
 private:
 
 	void network_sound_input_callback(breep::tcp::netdata_wrapper<sound_buffer_t>&);
+
 	void local_sound_input();
 
 	breep::tcp::network dual_network;

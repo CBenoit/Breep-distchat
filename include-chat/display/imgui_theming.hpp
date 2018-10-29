@@ -2,8 +2,6 @@
 #define SYSDIST_SERVER_IMGUI_THEMING_HPP
 
 
-
-
 namespace display::theme {
 	void MicrosoftLight();
 

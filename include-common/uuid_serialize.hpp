@@ -5,6 +5,7 @@
 #include <breep/util/serialization.hpp>
 
 breep::serializer& operator<<(breep::serializer& s, const boost::uuids::uuid& id);
+
 inline breep::serializer& operator<<(breep::serializer& s, const boost::uuids::uuid& id) {
 	for (const uint8_t& c : id.data) {
 		s << c;
@@ -13,6 +14,7 @@ inline breep::serializer& operator<<(breep::serializer& s, const boost::uuids::u
 }
 
 breep::deserializer& operator>>(breep::deserializer& d, boost::uuids::uuid& id);
+
 inline breep::deserializer& operator>>(breep::deserializer& d, boost::uuids::uuid& id) {
 	for (uint8_t& c : id.data) {
 		d >> c;

@@ -35,15 +35,19 @@
 class sound_sender {
 public:
 	explicit sound_sender() noexcept;
+
 	sound_sender(sound_sender&& other) noexcept;
+
 	sound_sender& operator=(sound_sender&& other) noexcept;
 
 	~sound_sender();
 
 	sound_sender(const sound_sender&) = delete;
+
 	sound_sender& operator=(const sound_sender&) = delete;
 
 	void send_sample(const breep::tcp::network& net) noexcept;
+
 	void send_sample_to(const breep::tcp::network& net, const breep::tcp::peer&) noexcept;
 
 	// returns whether a new sample was added or not

@@ -7,6 +7,7 @@
 struct create_account {
 	std::string username{};
 	std::string password{};
+
 	BREEP_ENABLE_SERIALIZATION(create_account, username, password)
 };
 // answer: connection_result
@@ -16,6 +17,7 @@ struct create_account {
 struct connect_account {
 	std::string username{};
 	std::string password{};
+
 	BREEP_ENABLE_SERIALIZATION(connect_account, username, password)
 };
 // answer: connection_result
@@ -30,7 +32,8 @@ enum class connection_state : uint8_t {
 };
 
 struct connection_result {
-	explicit connection_result(connection_state st = connection_state::user_already_connected, unsigned short p = 0) : state{st}, port{p} {}
+	explicit connection_result(connection_state st = connection_state::user_already_connected, unsigned short p = 0)
+			: state{st}, port{p} {}
 
 	connection_state state;
 	unsigned short port;

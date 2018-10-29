@@ -21,6 +21,7 @@ int main(int, char*[]) {
 	breep::tcp::network auth_network(auth_port);
 
 	auth_network.set_log_level(breep::log_level::debug);
+	chat_network.set_log_level(breep::log_level::debug);
 
 	std::unordered_map<std::string, peer_info> existing_peers;
 	std::mutex connected_peers_mutex;

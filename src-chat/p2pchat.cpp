@@ -2,34 +2,21 @@
 #include "commands.hpp"
 #include "peer_recap.hpp"
 
-bool p2pchat::connect_to(const connection_fields& cfields) {
+connection_state p2pchat::connect_to(const connection_fields& cfields) {
 	if (!cfields) {
-		return false;
+		return connection_state::unknown_error;
 	}
 
-	using refused = std::pair<connection_state, peer_recap>;
-	using accepted = std::pair<connection_state, unsigned short>;
+	connection_result state(connection_state::unknown_error);
 
-	std::optional<refused>  r_value;
-	std::optional<accepted> a_value;
-
-	dual_network.set_unlistened_type_listener([](auto&&...) {
-		std::cout << "OH NOES!!\n";
-	});
-
-	dual_network.add_data_listener<refused>([&r_value](breep::tcp::netdata_wrapper<refused>& data){
-		r_value = data.data;
-		data.network.remove_data_listener<refused>(data.listener_id);
-		data.network.disconnect();
-	});
-	dual_network.add_data_listener<accepted>([&a_value](breep::tcp::netdata_wrapper<accepted>& data){
-		a_value = data.data;
-		data.network.remove_data_listener<accepted>(data.listener_id);
+	dual_network.add_data_listener<connection_result>([&state](breep::tcp::netdata_wrapper<connection_result>& data) {
+		data.network.remove_data_listener<connection_result>(data.listener_id);
+		state = data.data;
 		data.network.disconnect();
 	});
 
 	if (!dual_network.connect(*cfields.remote_address, *cfields.remote_port)) {
-		return false;
+		return connection_state ::unknown_error;
 	}
 
 	if (*cfields.account_creation) {
@@ -45,15 +32,12 @@ bool p2pchat::connect_to(const connection_fields& cfields) {
 	}
 	dual_network.join();
 
-	if (r_value) {
-		// TODO: extract refusal explaination
-		return false;
+	if (state.state != connection_state::accepted) {
+		return state.state;
 	}
 
-	if (!a_value) {
-		// FIXME: do something (unexcepted)
-		return false;
+	if (!dual_network.connect(*cfields.remote_address, state.port)) {
+		return connection_state::unknown_error;
 	}
-
-	return dual_network.connect(*cfields.remote_address, a_value->second);
+	return connection_state::accepted;
 }

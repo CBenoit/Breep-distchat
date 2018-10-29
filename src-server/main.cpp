@@ -40,10 +40,10 @@ int main(int, char*[]) {
 		pending_peers_mutex.unlock();
 
 		if (connected_count || pending_count) {
-			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.source.id())));
+			data.network.send_object_to(data.source, connection_results::user_already_connected);
 
 		} else if (existing_peers.count(data.data.username)) {
-			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.data.username)));
+			data.network.send_object_to(data.source, connection_results::user_already_exists);
 
 		} else {
 			existing_peers.emplace(data.data.username, peer_info{data.source.id(), data.data.username, data.data.password});
@@ -55,7 +55,7 @@ int main(int, char*[]) {
 			pending_peers.emplace(data.source.id(), peer);
 			pending_peers_mutex.unlock();
 
-			data.network.send_object_to(data.source, std::make_pair(connection_state::accepted, chat_port));
+			data.network.send_object_to(data.source, connection_results::accepted(chat_port));
 		}
 	});
 
@@ -70,7 +70,7 @@ int main(int, char*[]) {
 		pending_peers_mutex.unlock();
 
 		if (connected_count || pending_count) {
-			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.source.id())));
+			data.network.send_object_to(data.source, connection_results::user_already_connected);
 			return;
 		}
 		try {
@@ -84,12 +84,12 @@ int main(int, char*[]) {
 				pending_peers.emplace(data.source.id(), peer);
 				pending_peers_mutex.unlock();
 
-				data.network.send_object_to(data.source, std::make_pair(connection_state::accepted, chat_port));
+				data.network.send_object_to(data.source, connection_results::accepted(chat_port));
 			} else {
-				data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap{}));
+				data.network.send_object_to(data.source, connection_results::bad_password);
 			}
 		} catch (const std::out_of_range& e) {
-			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.data.username)));
+			data.network.send_object_to(data.source, connection_results::no_such_account);
 		}
 	});
 
@@ -99,6 +99,8 @@ int main(int, char*[]) {
 	});
 
 	chat_network.add_connection_listener([&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](breep::tcp::network&, const breep::tcp::peer& p) {
+		// TODO:FIXME don't allow connections
+		// TODO:FIXME send peers recap
 
 		pending_peers_mutex.lock();
 		const auto count = pending_peers.erase(p.id());
@@ -121,7 +123,7 @@ int main(int, char*[]) {
 
 		while (it != end) {
 			if (it->second.should_accept()) {
-				it->second.set_state(connection_state::refused);
+				it->second.set_state(connection_state::unknown_error);
 				++it;
 			} else {
 				chat_network.send_object(it->second);

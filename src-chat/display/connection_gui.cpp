@@ -34,8 +34,8 @@
 
 namespace default_values {
     namespace {
-        constexpr unsigned short local_port = 1234;
-        constexpr unsigned short remote_port = local_port;
+        constexpr unsigned short remote_port = 1234;
+        constexpr unsigned short local_port = remote_port + 1;
         constexpr char user_name[] = "";
         constexpr char password[] = "";
         constexpr char addr[] = "127.0.0.1";

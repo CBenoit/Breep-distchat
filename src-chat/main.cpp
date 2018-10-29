@@ -71,8 +71,28 @@ int main(int argc,char* argv[]) {
 		gui.add_message(source.id_as_string(), data);
 	});
 
-    if (!chat->connect_to(fields)) {
-        throw "Failed to connect.\n";
+    if (connection_state st = chat->connect_to(fields) ; st != connection_state::accepted) {
+    	std::cout << "Failed to connect.\n";
+    	switch (st) {
+		    case connection_state::no_such_account:
+		    	std::cout << "Reason: no_such_account\n";
+		    	break;
+		    case connection_state::bad_password:
+		    	std::cout << "Reason: bad_password\n";
+		    	break;
+		    case connection_state::user_already_exists:
+		    	std::cout << "Reason: user_already_exists\n";
+		    	break;
+		    case connection_state::user_already_connected:
+		    	std::cout << "Reason: user_already_connected\n";
+		    	break;
+		    case connection_state::unknown_error:
+		    	[[fallthrough]];
+    		default:
+		    	std::cout << "Reason: unknown_error\n";
+		    	break;
+	    }
+	    return 1;
     }
 
 	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {

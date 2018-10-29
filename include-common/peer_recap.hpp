@@ -12,9 +12,9 @@
 class peer_recap {
 public:
 	peer_recap() = default;
-	peer_recap(std::string name, const boost::uuids::uuid& id = boost::uuids::nil_uuid(), connection_state st = connection_state::refused)
+	peer_recap(std::string name, const boost::uuids::uuid& id = boost::uuids::nil_uuid(), connection_state st = connection_state::unknown_error)
 			: peer_recap(id, name, st) {}
-	peer_recap(const boost::uuids::uuid& id, std::string name = "", connection_state st = connection_state::refused)
+	peer_recap(const boost::uuids::uuid& id, std::string name = "", connection_state st = connection_state::unknown_error)
 			: username(std::move(name)), uuid(id), state(st) {}
 
 	const std::string& name() const noexcept { return username; }
@@ -26,7 +26,7 @@ public:
 private:
 	std::string username{};
 	boost::uuids::uuid uuid{boost::uuids::nil_uuid()};
-	connection_state state{connection_state::refused};
+	connection_state state{connection_state::unknown_error};
 
 	BREEP_ENABLE_SERIALIZATION(peer_recap, username, uuid, state)
 };

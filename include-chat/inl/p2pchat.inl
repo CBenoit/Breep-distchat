@@ -132,10 +132,6 @@ inline bool p2pchat::remove_disconnection_callback(const connection_callback_id&
 	return dual_network.remove_disconnection_listener(dcb_id);
 }
 
-inline bool p2pchat::connect_to(boost::asio::ip::address_v4 addr, unsigned short forward_port) {
-	return dual_network.connect(addr, forward_port);
-}
-
 inline void p2pchat::add_sound_target(const breep::tcp::peer& p) {
 	add_sound_target(p.id());
 }

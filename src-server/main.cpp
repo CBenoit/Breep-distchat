@@ -99,7 +99,6 @@ int main(int, char*[]) {
 	});
 
 	chat_network.add_connection_listener([&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](breep::tcp::network& n, const breep::tcp::peer& p) {
-		// TODO:FIXME don't allow connections
 
 		connected_peers_mutex.lock();
 		for (auto&& peers_pair : connected_peers_uuids) {
@@ -109,6 +108,11 @@ int main(int, char*[]) {
 		connected_peers_uuids.insert(pending_peers.extract(p.id()));
 		pending_peers_mutex.unlock();
 		connected_peers_mutex.unlock();
+	});
+
+	chat_network.set_connection_predicate([&pending_peers, &pending_peers_mutex](const breep::tcp::peer& p) {
+		std::lock_guard ls(pending_peers_mutex);
+		return pending_peers.count(p.id()) != 0;
 	});
 
 	chat_network.awake();

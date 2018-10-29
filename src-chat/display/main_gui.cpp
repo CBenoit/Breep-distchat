@@ -152,6 +152,14 @@ void display::main_gui::update_frame() {
 				window.close();
 			}
 		};
+
+		Scoped(Menu("Users")) {
+            for (auto &&item : uuids_names) {
+                if (ImGui::MenuItem(item.second.data())) {
+                    focused_uuid = item.first;
+                }
+            }
+		};
 	};
 
 	Scoped(Child(ImGui::GetID("chat"), ImVec2(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y - 60)))) {
@@ -168,37 +176,41 @@ void display::main_gui::update_frame() {
 }
 
 void display::main_gui::update_chat_frame() {
-	auto print_message = [](const std::tuple<int, std::string, std::string>& tpl) {
-		ImGui::PushTextWrapPos();
-		ImGui::TextColored(author_color(std::get<1>(tpl)), "%s:", std::get<1>(tpl).data());
-		ImGui::SameLine();
-		ImGui::TextColored(imgui_color(colors::white), "%s", std::get<2>(tpl).data());
-		ImGui::PopTextWrapPos();
-	};
+    auto msgs = messages.find(focused_uuid);
+    auto sys_msgs = sys_messages.find(focused_uuid);
+    if (msgs != messages.end() && sys_msgs != sys_messages.end()) {
+        auto print_message = [](const message &msg) {
+            ImGui::PushTextWrapPos();
+            ImGui::TextColored(author_color(msg.author), "%s:", msg.author.data());
+            ImGui::SameLine();
+            ImGui::TextColored(imgui_color(colors::white), "%s", msg.content.data());
+            ImGui::PopTextWrapPos();
+        };
 
-	auto print_system_message = [](const std::tuple<int, std::string>& tpl) {
-		ImGui::PushTextWrapPos();
-		ImGui::TextColored(imgui_color(colors::system), "%s", std::get<1>(tpl).data());
-		ImGui::PopTextWrapPos();
-	};
+        auto print_system_message = [](const sys_message &msg) {
+            ImGui::PushTextWrapPos();
+            ImGui::TextColored(imgui_color(colors::system), "%s", msg.content.data());
+            ImGui::PopTextWrapPos();
+        };
 
-	std::lock_guard lg(msg_mutex);
-	auto msg_it = messages.cbegin();
-	auto sys_it = system_messages.cbegin();
+        std::lock_guard lg(msg_mutex);
+        auto msg_it = msgs->second.cbegin();
+        auto sys_it = sys_msgs->second.cbegin();
 
-	while(msg_it != messages.cend() && sys_it != system_messages.cend()) {
-		if (std::get<int>(*msg_it) < std::get<int>(*sys_it)) {
-			print_message(*msg_it++);
-		} else {
-			print_system_message(*sys_it++);
-		}
-	}
+        while (msg_it != msgs->second.cend() && sys_it != sys_msgs->second.cend()) {
+            if (msg_it->position < sys_it->position) {
+                print_message(*msg_it++);
+            } else {
+                print_system_message(*sys_it++);
+            }
+        }
 
-	while (msg_it != messages.cend()) {
-		print_message(*msg_it++);
-	}
+        while (msg_it != msgs->second.cend()) {
+            print_message(*msg_it++);
+        }
 
-	while (sys_it != system_messages.cend()) {
-		print_system_message(*sys_it++);
-	}
+        while (sys_it != sys_msgs->second.cend()) {
+            print_system_message(*sys_it++);
+        }
+    }
 }

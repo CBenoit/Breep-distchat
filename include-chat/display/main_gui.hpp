@@ -31,6 +31,9 @@
 #include <functional>
 #include <imgui.h>
 #include <iostream>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/container_hash/extensions.hpp>
 
 namespace display {
 	enum class colors {
@@ -44,7 +47,24 @@ namespace display {
 		system = 0x6495ED
 	};
 
+	struct message {
+	    message(int position_, std::string_view author_, std::string_view content_)
+	        : position(position_), author(author_), content(content_) {}
+        int position;
+	    std::string author;
+	    std::string content;
+    };
+
+	struct sys_message {
+	    sys_message(int position_, std::string_view content_) : position(position_), content(content_) {}
+        int position;
+	    std::string content;
+	};
+
 	bool is_instanciated();
+
+	template <typename T>
+    using uuid_map = std::unordered_map<boost::uuids::uuid, T, boost::hash<boost::uuids::uuid>>;
 
 	class main_gui {
 
@@ -61,16 +81,34 @@ namespace display {
 
 		void system_message(std::string_view message) {
 			std::lock_guard lg(msg_mutex);
-			system_messages.emplace_back(system_messages.size() + messages.size(), message);
+			auto sys_msgs = sys_messages.find(focused_uuid);
+			if (sys_msgs != sys_messages.end()) {
+                sys_msgs->second.emplace_back(sys_messages.size() + messages.size(), message);
+			}
 		}
 
 		void add_message(std::string_view author, std::string_view msg) {
 			std::lock_guard lg(msg_mutex);
-			messages.emplace_back(system_messages.size() + messages.size(), author, msg);
+			auto msgs = messages.find(focused_uuid);
+			if (msgs != messages.end()) {
+                msgs->second.emplace_back(sys_messages.size() + messages.size(), author, msg);
+			}
 		}
 
 		void set_textinput_callback(std::function<void(std::string_view)> tic) {
 			textinput_callback = std::move(tic);
+		}
+
+		void add_user(boost::uuids::uuid uuid, std::string_view username) {
+            uuids_names.emplace(uuid, username);
+		}
+
+		void remove_user(boost::uuids::uuid uuid) {
+		    uuids_names.erase(uuid);
+		}
+
+		boost::uuids::uuid& get_focused_uuid() {
+            return focused_uuid;
 		}
 
 	private:
@@ -84,13 +122,16 @@ namespace display {
 		sf::Clock clk;
 		const int frame_flags;
 
-		std::vector<std::tuple<int, std::string, std::string>> messages{};
-		std::vector<std::tuple<int, std::string>> system_messages{};
+		uuid_map<std::vector<message>> messages{};
+		uuid_map<std::vector<sys_message>> sys_messages{};
 		std::mutex msg_mutex{};
 
 		std::string textinput_buffer{};
 
 		std::function<void(std::string_view)> textinput_callback{};
+
+		uuid_map<std::string> uuids_names{};
+		boost::uuids::uuid focused_uuid{boost::uuids::nil_uuid()};
 	};
 }
 

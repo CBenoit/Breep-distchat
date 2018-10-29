@@ -31,13 +31,15 @@
 #include <breep/network/tcp.hpp>
 #include <audio_source.hpp>
 #include <display/connection_gui.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/container_hash/extensions.hpp>
 
 #include "sound_def.hpp"
 #include "sound_sender.hpp"
 #include "flow_controller.hpp"
 #include "display/main_gui.hpp"
 #include "p2pchat.hpp"
-
+#include "peer_recap.hpp"
 #include "connection_fields.hpp"
 
 BREEP_DECLARE_TYPE(std::string)
@@ -47,61 +49,69 @@ void receiver();
 
 int main(int argc,char* argv[]) {
     connection_fields fields;
-    for (display::connection_gui cgui ; !fields ; fields = cgui.show(fields)) {
-    }
+    for (display::connection_gui cgui ; !fields ; fields = cgui.show(fields)) {}
 
-    std::unique_ptr<p2pchat> chat = nullptr;
-    chat = std::make_unique<p2pchat>(*fields.local_port);
+    p2pchat chat{*fields.local_port};
 
     display::main_gui gui;
     audio_source::init();
 
-	std::unique_ptr<breep::tcp::peer> peer = nullptr;
-	chat->add_connection_callback([&peer, &gui](const breep::tcp::peer& lp) {
+    std::unordered_map<boost::uuids::uuid, breep::tcp::peer, boost::hash<boost::uuids::uuid>> peers{};
+	chat.add_connection_callback([&peers, &gui](const breep::tcp::peer& lp) {
 		gui.system_message("Connected: " + lp.id_as_string());
-		peer = std::make_unique<breep::tcp::peer>(lp);
+		peers.emplace(lp.id(), lp);
 	});
 
-	chat->add_disconnection_callback([&peer, &gui](const breep::tcp::peer& lp) {
+	chat.add_disconnection_callback([&peers, &gui](const breep::tcp::peer& lp) {
 		gui.system_message("Disconnected: " + lp.id_as_string());
-		peer = nullptr;
+        gui.remove_user(lp.id());
+        peers.erase(lp.id());
 	});
 
-	chat->add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
+	chat.add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
 		gui.add_message(source.id_as_string(), data);
 	});
 
-    if (connection_state st = chat->connect_to(fields) ; st != connection_state::accepted) {
-    	std::cout << "Failed to connect.\n";
-    	switch (st) {
-		    case connection_state::no_such_account:
-		    	std::cout << "Reason: no_such_account\n";
-		    	break;
-		    case connection_state::bad_password:
-		    	std::cout << "Reason: bad_password\n";
-		    	break;
-		    case connection_state::user_already_exists:
-		    	std::cout << "Reason: user_already_exists\n";
-		    	break;
-		    case connection_state::user_already_connected:
-		    	std::cout << "Reason: user_already_connected\n";
-		    	break;
-		    case connection_state::unknown_error:
-		    	[[fallthrough]];
-    		default:
-		    	std::cout << "Reason: unknown_error\n";
-		    	break;
-	    }
-	    return 1;
+    if (connection_state st = chat.connect_to(fields) ; st != connection_state::accepted) {
+        std::cout << "Failed to connect.\n";
+        switch (st) {
+            case connection_state::no_such_account:
+                std::cout << "Reason: no_such_account\n";
+                break;
+            case connection_state::bad_password:
+                std::cout << "Reason: bad_password\n";
+                break;
+            case connection_state::user_already_exists:
+                std::cout << "Reason: user_already_exists\n";
+                break;
+            case connection_state::user_already_connected:
+                std::cout << "Reason: user_already_connected\n";
+                break;
+            case connection_state::unknown_error:
+                [[fallthrough]];
+            default:
+                std::cout << "Reason: unknown_error\n";
+                break;
+        }
+        return 1;
     }
 
-	gui.set_textinput_callback([&gui, &chat, &peer](std::string_view v) {
+	chat.add_callback<peer_recap>([&gui](const peer_recap& peer_recap, const breep::tcp::peer& source) {
+		gui.add_user(source.id(), peer_recap.name());
+	});
+
+	gui.set_textinput_callback([&gui, &chat, &peers](std::string_view v) {
 		std::string s(v);
-		gui.add_message(chat->me().id_as_string().data(), s);
-		if (peer) {
-			chat->send_to(*peer, s);
+		gui.add_message(chat.me().id_as_string().data(), s);
+
+		auto it = peers.find(gui.get_focused_uuid());
+		if (it != peers.end()) {
+            chat.send_to(it->second, s);
 		}
 	});
+
+    // TODO: add connection predicate to refuse not acknowledged users
+    // TODO: vérifier que le mec qui envoie le peer recap c'est le serveur
 
 	while (gui.display());
 

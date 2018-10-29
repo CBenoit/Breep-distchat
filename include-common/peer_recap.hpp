@@ -3,6 +3,7 @@
 
 #include <string>
 #include <boost/uuid/uuid.hpp>
+#include <boost/uuid/nil_generator.hpp>
 #include <breep/util/serialization.hpp>
 #include <breep/util/type_traits.hpp>
 

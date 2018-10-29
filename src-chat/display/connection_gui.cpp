@@ -94,9 +94,9 @@ namespace {
 }
 
 display::connection_gui::connection_gui()
-		: window{sf::VideoMode(1280, 720), "Clonnect login"}
+		: window{sf::VideoMode(400, 160), "Clonnect login"}
 		, frame_flags{ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar}
+		              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings}
 		, clk{}
 {
 	window.setFramerateLimit(60);

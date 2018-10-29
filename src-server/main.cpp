@@ -24,7 +24,7 @@ int main(int, char*[]) {
 
 	std::unordered_map<std::string, peer_info> existing_peers;
 	std::mutex connected_peers_mutex;
-	std::unordered_set<boost::uuids::uuid, boost::hash<boost::uuids::uuid>> connected_peers_uuids;
+	std::unordered_map<boost::uuids::uuid, peer_recap, boost::hash<boost::uuids::uuid>> connected_peers_uuids;
 
 	std::mutex pending_peers_mutex;
 	std::unordered_map<boost::uuids::uuid, peer_recap, boost::hash<boost::uuids::uuid>> pending_peers;
@@ -98,18 +98,17 @@ int main(int, char*[]) {
 		connected_peers_uuids.erase(p.id());
 	});
 
-	chat_network.add_connection_listener([&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](breep::tcp::network&, const breep::tcp::peer& p) {
+	chat_network.add_connection_listener([&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](breep::tcp::network& n, const breep::tcp::peer& p) {
 		// TODO:FIXME don't allow connections
-		// TODO:FIXME send peers recap
 
+		connected_peers_mutex.lock();
+		for (auto&& peers_pair : connected_peers_uuids) {
+			n.send_object_to(p, peers_pair.second);
+		}
 		pending_peers_mutex.lock();
-		const auto count = pending_peers.erase(p.id());
+		connected_peers_uuids.insert(pending_peers.extract(p.id()));
 		pending_peers_mutex.unlock();
-
-		if (!count) { return; }
-
-		std::lock_guard lg(connected_peers_mutex);
-		connected_peers_uuids.emplace(p.id());
+		connected_peers_mutex.unlock();
 	});
 
 	chat_network.awake();

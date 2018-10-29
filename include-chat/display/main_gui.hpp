@@ -47,6 +47,9 @@ namespace display {
 	bool is_instanciated();
 
 	class main_gui {
+
+		using theme_fnct = void(*)();
+
 	public:
 		main_gui();
 		~main_gui();
@@ -73,6 +76,9 @@ namespace display {
 	private:
 		void update_frame();
 		void update_chat_frame();
+
+		theme_fnct new_theme{nullptr};
+		theme_fnct current_theme{nullptr};
 
 		sf::RenderWindow window;
 		sf::Clock clk;

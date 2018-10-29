@@ -42,7 +42,7 @@ int main(int, char*[]) {
 		if (connected_count || pending_count) {
 			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.source.id())));
 
-		} else if (existing_peers.count(data.data.username)){
+		} else if (existing_peers.count(data.data.username)) {
 			data.network.send_object_to(data.source, std::make_pair(connection_state::refused, peer_recap(data.data.username)));
 
 		} else {

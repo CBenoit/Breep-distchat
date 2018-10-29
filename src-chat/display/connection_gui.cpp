@@ -26,6 +26,7 @@
 #include <SFML/Window/Event.hpp>
 #include <imgui-SFML.h>
 #include <imgui.h>
+#include <iostream>
 
 #include "display/connection_gui.hpp"
 #include "display/imgui_helper.hpp"
@@ -35,7 +36,7 @@ namespace default_values {
     namespace {
         constexpr unsigned short local_port = 1234;
         constexpr unsigned short remote_port = local_port;
-        constexpr char user_name[] = "Username";
+        constexpr char user_name[] = "";
         constexpr char password[] = "";
         constexpr char addr[] = "127.0.0.1";
     }
@@ -102,6 +103,9 @@ display::connection_gui::connection_gui()
 
 	ImGui::SFML::Init(window);
 	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.WindowRounding = 0.f;
 }
 
 display::connection_gui::~connection_gui() {
@@ -148,11 +152,20 @@ connection_fields display::connection_gui::show(const connection_fields& fields)
         ImGui::Begin("Main", nullptr, frame_flags);
 
         // TODO HERE
-        ImGui::InputText("Username", username, std::size(username));
-        ImGui::InputInt("Local port", &local_port);
-        ImGui::InputText("Remote address", remote_addr, std::size(remote_addr));
-        ImGui::InputInt("Remote port", &remote_port);
-        ImGui::InputText("Password", password, std::size(password), ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
+        ImGui::Text("      Username: "); ImGui::SameLine();
+        ImGui::InputText("##Username", username, std::size(username));
+
+        ImGui::Text("      Password: "); ImGui::SameLine();
+	    ImGui::InputText("##Password", password, std::size(password), ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
+
+	    ImGui::Text("Remote address: "); ImGui::SameLine();
+	    ImGui::InputText("##Remote address", remote_addr, std::size(remote_addr));
+
+	    ImGui::Text("   Remote port: "); ImGui::SameLine();
+	    ImGui::InputInt("##Remote port", &remote_port, 0, 0);
+
+	    ImGui::Text("    Local port: "); ImGui::SameLine();
+	    ImGui::InputInt("##Local port", &local_port, 0, 0);
 
         if (ImGui::Button("Connect")) {
         	ans.account_creation = false;
@@ -169,8 +182,6 @@ connection_fields display::connection_gui::show(const connection_fields& fields)
         ImGui::SFML::Render(window);
         window.display();
     } while (keep_looping);
-
-    boost::system::error_code ec{};
 
 	test_size_and_set(username, ans.username);
 	test_size_and_set(password, ans.password);

@@ -33,6 +33,7 @@
 
 #include "display/main_gui.hpp"
 #include "display/imgui_helper.hpp"
+#include "display/imgui_theming.hpp"
 
 namespace {
 	std::atomic<bool> instantiaded{false};
@@ -81,6 +82,12 @@ display::main_gui::main_gui()
 
 	ImGui::SFML::Init(window);
 	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.WindowRounding = 0.f;
+
+	current_theme = theme::dark_itamago;
+	current_theme();
 }
 
 display::main_gui::~main_gui() {
@@ -91,6 +98,11 @@ display::main_gui::~main_gui() {
 bool display::main_gui::display() {
 	if (!is_open()) {
 		return false;
+	}
+	if (new_theme) {
+		current_theme = new_theme;
+		new_theme();
+		new_theme = nullptr;
 	}
 
 	sf::Event ev{};
@@ -120,10 +132,21 @@ bool display::main_gui::display() {
 }
 
 void display::main_gui::update_frame() {
+	auto theme_entry = [this](const char* theme_name, theme_fnct theme) {
+		if (ImGui::MenuItem(theme_name, nullptr, current_theme == theme)) {
+			new_theme = theme;
+		}
+	};
+
 	Scoped(MenuBar()) {
 		Scoped(Menu("Options")) {
 			Scoped(Menu("Color theme")) {
-
+				theme_entry("Cherry", theme::cherry);
+				theme_entry("Dark", theme::dark);
+				theme_entry("Itamago Dark", theme::dark_itamago);
+//				theme_entry("Itamago Light", theme::light_itamago);
+//				theme_entry("Microsoft Light", theme::MicrosoftLight);
+				theme_entry("Unity Engine 4", theme::UE4);
 			};
 			if(ImGui::MenuItem("Quit")) {
 				window.close();

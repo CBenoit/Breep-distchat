@@ -1,9 +1,7 @@
-//
-// Created by auroden on 10/27/18.
-//
-
 #ifndef SYSDIST_SERVER_IMGUI_HELPER_HPP
 #define SYSDIST_SERVER_IMGUI_HELPER_HPP
+
+#include <imgui.h>
 
 #define IMGUIGUARD(x) struct x { \
 	template <typename... Args>\

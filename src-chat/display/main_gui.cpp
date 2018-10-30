@@ -95,14 +95,25 @@ bool display::main_gui::display() {
 
 	ImGui::SetNextWindowSize(ImVec2{static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
 	ImGui::SetNextWindowPos({});
+
+	bool should_change_color = !new_messages.empty();
+	if (should_change_color) {
+		std::swap(new_message_color, ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
+	}
+
 	ImGui::Begin("Main", nullptr, frame_flags);
 
+	ImGui::ShowStyleEditor();
 	update_frame();
 
 	ImGui::End();
 	window.clear();
 	ImGui::SFML::Render(window);
 	window.display();
+
+	if (should_change_color) {
+		std::swap(new_message_color, ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
+	}
 	return true;
 }
 
@@ -128,11 +139,21 @@ void display::main_gui::update_frame() {
 			}
 		};
 
-		Scoped(Menu("Users")) {
-			std::lock_guard lg{msg_mutex};
+		std::string select_user_menu_name = "Select user";
+		std::lock_guard lg{msg_mutex};
+		if (!new_messages.empty()) {
+			select_user_menu_name += " (" + std::to_string(new_messages.size()) + ")";
+		}
+		Scoped(Menu(select_user_menu_name.data())) {
 			for (auto&& item : messages) {
-				if (ImGui::MenuItem(item.first.data())) {
+				std::string entry_name = item.first;
+				if (new_messages.count(item.first)) {
+					entry_name += " (!)";
+				}
+
+				if (ImGui::MenuItem(entry_name.data(), nullptr, focused_user ? *focused_user == item.first : false)) {
 					focused_user = item.first;
+					new_messages.erase(item.first);
 				}
 			}
 		};
@@ -150,12 +171,15 @@ void display::main_gui::update_frame() {
 		}
 	};
 
-	// input area
-	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
-	                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue |
-	                              ImGuiInputTextFlags_AllowTabInput | (can_send_msgs ? 0 : ImGuiInputTextFlags_ReadOnly))) {
-		textinput_callback(std::string_view(textinput_buffer.data()));
-		textinput_buffer[0] = '\0';
-		ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
+	if (can_send_msgs) {
+		// input area
+		if (ImGui::InputTextMultiline("##text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
+		                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine)) {
+			textinput_callback(std::string_view(textinput_buffer.data()));
+			textinput_buffer[0] = '\0';
+			ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
+		}
+	} else {
+		ImGui::TextUnformatted("No connected user selected.");
 	}
 }

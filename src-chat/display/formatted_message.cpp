@@ -34,14 +34,19 @@ namespace {
 void display::formatted_message::print() {
 	if (auto user_msg = std::get_if<user_message>(&msg)) {
 		ImGui::PushTextWrapPos();
-		ImGui::TextColored(author_color(user_msg->author), "%s:", user_msg->author.data());
+		ImGui::PushStyleColor(ImGuiCol_Text, author_color(user_msg->author));
+		ImGui::TextUnformatted(user_msg->author.data(), user_msg->author.data() + user_msg->author.size());
 		ImGui::SameLine();
-		ImGui::TextColored(imgui_color(colors::white), "%s", user_msg->content.data());
+		ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::white));
+		ImGui::TextUnformatted(user_msg->content.data(), user_msg->content.data() + user_msg->content.size());
+		ImGui::PopStyleColor(2);
 		ImGui::PopTextWrapPos();
 
 	} else if (auto sys_msg = std::get_if<system_message>(&msg)) {
 		ImGui::PushTextWrapPos();
-		ImGui::TextColored(imgui_color(colors::system), "%s", sys_msg->content.data());
+		ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::system));
+		ImGui::TextUnformatted(sys_msg->content.data(), sys_msg->content.data() + sys_msg->content.size());
+		ImGui::PopStyleColor();
 		ImGui::PopTextWrapPos();
 
 	} else {

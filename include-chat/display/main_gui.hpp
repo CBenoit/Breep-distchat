@@ -86,6 +86,9 @@ namespace display {
 			if (source_messages != messages.end()) {
 				source_messages->second.emplace_back(std::move(msg));
 			}
+			if (!focused_user || source != *focused_user) {
+				new_messages.emplace(source);
+			}
 		}
 
 		void set_textinput_callback(std::function<void(std::string_view)> tic) {
@@ -112,6 +115,9 @@ namespace display {
 	private:
 		void update_frame();
 
+		ImVec4 new_message_color{0.502f, 0.075f, 0.256f, 1.f};
+		ImVec4 pop_up_new_message_color{0.502f, 0.075f, 0.256f, 1.f};
+
 		theme_fnct new_theme{nullptr};
 		theme_fnct current_theme{nullptr};
 
@@ -121,6 +127,7 @@ namespace display {
 
 		std::mutex msg_mutex{};
 		std::unordered_map<std::string, msg_list> messages{};
+		std::set<std::string> new_messages{};
 
 		std::string textinput_buffer{};
 

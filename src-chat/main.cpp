@@ -28,7 +28,6 @@
 
 #include <AL/al.h>
 #include <AL/alc.h>
-#include <breep/network/tcp.hpp>
 #include <audio_source.hpp>
 #include <display/connection_gui.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -50,6 +49,7 @@ void sender();
 void receiver();
 
 int main(int argc, char* argv[]) {
+
 	connection_fields fields;
 	for (display::connection_gui cgui; !fields; fields = cgui.show(fields)) {}
 
@@ -104,9 +104,6 @@ int main(int argc, char* argv[]) {
 			chat.send_to(gui.get_focused_name().value(), s);
 		}
 	});
-
-	// TODO: add connection predicate to refuse not acknowledged users
-	// TODO: vérifier que le mec qui envoie le peer recap c'est le serveur
 
 	while (gui.display());
 

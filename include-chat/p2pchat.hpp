@@ -38,6 +38,8 @@
 enum class connection_state : uint8_t;
 
 class p2pchat {
+	template <typename T>
+	using uuid_map = std::unordered_map<boost::uuids::uuid, T, boost::hash<boost::uuids::uuid>>;
 
 public:
 
@@ -83,17 +85,24 @@ private:
 
 	void local_sound_input();
 
+	void setup_listeners();
+
+	void clear_listeners();
+
 	std::string local_name{};
+	std::optional<boost::uuids::uuid> server_id{};
+	uuid_map<peer_recap> pending_peers{};
 
 	breep::tcp::network dual_network;
 	std::mutex peers_map_mutex{};
 	std::unordered_map<std::string, breep::tcp::peer> peers_by_name{};
-	std::unordered_map<boost::uuids::uuid, std::string, boost::hash<boost::uuids::uuid>> peers_name_by_id{};
+
+	uuid_map<std::string> peers_name_by_id{};
 
 	std::mutex connection_mutex{};
 	std::mutex disconnection_mutex{};
-	std::vector<connection_callback> co_listeners;
-	std::vector<connection_callback> dc_listeners;
+	std::vector<connection_callback> co_listeners{};
+	std::vector<connection_callback> dc_listeners{};
 
 	sound_sender s_sender{};
 

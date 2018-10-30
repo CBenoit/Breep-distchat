@@ -44,7 +44,7 @@ namespace display {
 		green = 0x00FF7F,
 		cyan = 0xE0FFFF,
 		pink = 0xFF69B4,
-		yellow = 0xFAFAD2,
+		yellow = 0xFFD700,
 		white = 0xFFFFF0,
 		system = 0x6495ED
 	};

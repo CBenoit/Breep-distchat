@@ -103,7 +103,6 @@ bool display::main_gui::display() {
 
 	ImGui::Begin("Main", nullptr, frame_flags);
 
-	ImGui::ShowStyleEditor();
 	update_frame();
 
 	ImGui::End();

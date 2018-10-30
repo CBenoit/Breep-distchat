@@ -38,6 +38,8 @@ void display::formatted_message::print() {
 		ImGui::TextUnformatted(user_msg->author.data(), user_msg->author.data() + user_msg->author.size());
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::white));
+		ImGui::TextUnformatted(": ");
+		ImGui::SameLine();
 		ImGui::TextUnformatted(user_msg->content.data(), user_msg->content.data() + user_msg->content.size());
 		ImGui::PopStyleColor(2);
 		ImGui::PopTextWrapPos();

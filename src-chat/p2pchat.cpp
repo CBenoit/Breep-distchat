@@ -39,5 +39,6 @@ connection_state p2pchat::connect_to(const connection_fields& cfields) {
 	if (!dual_network.connect(*cfields.remote_address, state.port)) {
 		return connection_state::unknown_error;
 	}
+	local_name = *cfields.username;
 	return connection_state::accepted;
 }

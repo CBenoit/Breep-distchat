@@ -35,6 +35,8 @@
 #include <boost/uuid/nil_generator.hpp>
 #include <boost/container_hash/extensions.hpp>
 
+#include "formatted_message.hpp"
+
 namespace display {
 	enum class colors {
 		red = 0xDC143C,
@@ -47,30 +49,26 @@ namespace display {
 		system = 0x6495ED
 	};
 
-	struct message {
-		message(int position_, std::string_view author_, std::string_view content_)
-				: position(position_), author(author_), content(content_) {}
-
-		int position;
-		std::string author;
-		std::string content;
-	};
-
-	struct sys_message {
-		sys_message(int position_, std::string_view content_) : position(position_), content(content_) {}
-
-		int position;
-		std::string content;
-	};
-
 	bool is_instanciated();
-
-	template<typename T>
-	using uuid_map = std::unordered_map<boost::uuids::uuid, T, boost::hash<boost::uuids::uuid>>;
 
 	class main_gui {
 
 		using theme_fnct = void (*)();
+		struct msg_list {
+			void print() {
+				for (auto&& msg : messages) {
+					msg.print();
+				}
+			}
+
+			template <typename... Args>
+			void emplace_back(Args&&... args) {
+				messages.emplace_back(std::forward<Args>(args)...);
+			}
+
+			std::vector<formatted_message> messages{};
+			bool can_send_messages{};
+		};
 
 	public:
 		main_gui();
@@ -82,19 +80,11 @@ namespace display {
 
 		bool is_open() { return window.isOpen(); }
 
-		void system_message(const boost::uuids::uuid& uuid, std::string_view message) {
+		void add_message(const std::string& source, formatted_message&& msg) {
 			std::lock_guard lg{msg_mutex};
-			auto sys_msgs = sys_messages.find(uuid);
-			if (sys_msgs != sys_messages.end()) {
-				sys_msgs->second.emplace_back(sys_messages.size() + messages.size(), message);
-			}
-		}
-
-		void add_message(const boost::uuids::uuid& uuid, std::string_view author, std::string_view msg) {
-			std::lock_guard lg{msg_mutex};
-			auto msgs = messages.find(uuid);
-			if (msgs != messages.end()) {
-				msgs->second.emplace_back(sys_messages.size() + messages.size(), author, msg);
+			auto source_messages = messages.find(source);
+			if (source_messages != messages.end()) {
+				source_messages->second.emplace_back(std::move(msg));
 			}
 		}
 
@@ -102,28 +92,25 @@ namespace display {
 			textinput_callback = std::move(tic);
 		}
 
-		void add_user(boost::uuids::uuid uuid, std::string_view username) {
-			std::scoped_lock lock{uuids_mutex, msg_mutex};
-			uuids_names.emplace(uuid, username);
-			messages.emplace(uuid, std::vector<message>{});
-			sys_messages.emplace(uuid, std::vector<sys_message>{});
+		void add_user(std::string_view username) {
+			std::scoped_lock lock{msg_mutex};
+			messages[std::string(username)].can_send_messages = true;
 		}
 
-		void remove_user(boost::uuids::uuid uuid) {
-			std::scoped_lock lock{uuids_mutex, msg_mutex};
-			uuids_names.erase(uuid);
-			messages.erase(uuid);
-			sys_messages.erase(uuid);
+		void remove_user(const std::string& username) {
+			std::scoped_lock lock{msg_mutex};
+			auto source_messages = messages.find(username);
+			if (source_messages != messages.end()) {
+				source_messages->second.can_send_messages = false;
+			}
 		}
 
-		boost::uuids::uuid& get_focused_uuid() {
-			return focused_uuid;
+		const std::optional<std::string>& get_focused_name() const {
+			return focused_user;
 		}
 
 	private:
 		void update_frame();
-
-		void update_chat_frame();
 
 		theme_fnct new_theme{nullptr};
 		theme_fnct current_theme{nullptr};
@@ -132,17 +119,14 @@ namespace display {
 		sf::Clock clk;
 		const int frame_flags;
 
-		uuid_map<std::vector<message>> messages{};
-		uuid_map<std::vector<sys_message>> sys_messages{};
 		std::mutex msg_mutex{};
+		std::unordered_map<std::string, msg_list> messages{};
 
 		std::string textinput_buffer{};
 
 		std::function<void(std::string_view)> textinput_callback{};
 
-		uuid_map<std::string> uuids_names{};
-		std::mutex uuids_mutex{};
-		boost::uuids::uuid focused_uuid{boost::uuids::nil_uuid()};
+		std::optional<std::string> focused_user{};
 	};
 }
 

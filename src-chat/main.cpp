@@ -41,6 +41,7 @@
 #include "p2pchat.hpp"
 #include "peer_recap.hpp"
 #include "connection_fields.hpp"
+#include "display/formatted_message.hpp"
 
 BREEP_DECLARE_TYPE(std::string)
 
@@ -57,24 +58,18 @@ int main(int argc, char* argv[]) {
 	display::main_gui gui;
 	audio_source::init();
 
-	std::unordered_map<boost::uuids::uuid, breep::tcp::peer, boost::hash<boost::uuids::uuid>> peers{};
-	chat.add_connection_callback([&peers, &gui](const breep::tcp::peer& lp) {
-		gui.system_message(lp.id(), "Connected: " + lp.id_as_string());
-		peers.emplace(lp.id(), lp);
+	chat.add_connection_callback([&gui](const peer_recap& pr) {
+		gui.add_user(pr.name());
+		gui.add_message(pr.name(), display::system_message(pr.name() + " connected."));
 	});
 
-	chat.add_disconnection_callback([&peers, &gui](const breep::tcp::peer& lp) {
-		gui.system_message(lp.id(), "Disconnected: " + lp.id_as_string());
-		gui.remove_user(lp.id());
-		peers.erase(lp.id());
+	chat.add_disconnection_callback([&gui](const peer_recap& pr) {
+		gui.add_message(pr.name(), display::system_message(pr.name() + " disconnected."));
+		gui.remove_user(pr.name());
 	});
 
-	chat.add_callback<std::string>([&gui](const std::string& data, const breep::tcp::peer& source) {
-		gui.add_message(source.id(), source.id_as_string(), data);
-	});
-
-	chat.add_callback<peer_recap>([&gui](const peer_recap& peer_recap, const breep::tcp::peer& source) {
-		gui.add_user(source.id(), peer_recap.name());
+	chat.add_callback<std::string>([&gui](const std::string& data, const peer_recap& source) {
+		gui.add_message(source.name(), display::user_message{source.name(), data});
 	});
 
 	if (connection_state st = chat.connect_to(fields); st != connection_state::accepted) {
@@ -101,13 +96,12 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	gui.set_textinput_callback([&gui, &chat, &peers](std::string_view v) {
+	gui.set_textinput_callback([&gui, &chat](std::string_view v) {
 		std::string s(v);
-		gui.add_message(gui.get_focused_uuid(), chat.me().id_as_string().data(), s);
+		gui.add_message(*gui.get_focused_name(), display::user_message(chat.me(), v));
 
-		auto it = peers.find(gui.get_focused_uuid());
-		if (it != peers.end()) {
-			chat.send_to(it->second, s);
+		if (gui.get_focused_name()) {
+			chat.send_to(gui.get_focused_name().value(), s);
 		}
 	});
 

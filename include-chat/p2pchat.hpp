@@ -29,9 +29,11 @@
 #include <boost/asio/ip/address.hpp>
 #include <breep/network/tcp.hpp>
 #include <utility>
+#include <map>
 
 #include "sound_sender.hpp"
 #include "connection_fields.hpp"
+#include "peer_recap.hpp"
 
 enum class connection_state : uint8_t;
 
@@ -40,10 +42,8 @@ class p2pchat {
 public:
 
 	template<typename T>
-	using callback = std::function<void(const T&, const breep::tcp::peer&)>;
-	using callback_id = breep::type_listener_id;
-	using connection_callback = std::function<void(const breep::tcp::peer&)>;
-	using connection_callback_id = breep::listener_id;
+	using callback = std::function<void(const T&, const peer_recap&)>;
+	using connection_callback = std::function<void(const peer_recap&)>;
 
 	explicit p2pchat(unsigned short local_port);
 
@@ -57,38 +57,25 @@ public:
 
 	void mute_sound_input(bool muted);
 
-	void add_sound_target(const breep::tcp::peer& p);
+	void add_sound_target(const std::string& p);
 
-	void add_sound_target(const boost::uuids::uuid& p);
-
-	void remove_sound_target(const breep::tcp::peer& p);
-
-	void remove_sound_target(const boost::uuids::uuid& p);
+	void remove_sound_target(const std::string& p);
 
 	template<typename T>
-	void send_to(const breep::tcp::peer&, const T& value);
+	void add_callback(callback<T>);
 
-	template<typename T>
-	callback_id add_callback(callback<T>);
+	void add_connection_callback(connection_callback);
 
-	/* returns true if a listener was removed */
-	bool remove_callback(const callback_id& cb_id);
+	void add_disconnection_callback(connection_callback);
 
-	connection_callback_id add_connection_callback(connection_callback);
-
-	/* returns true if a listener was removed */
-	bool remove_connection_callback(const connection_callback_id& ccb_id);
-
-	connection_callback_id add_disconnection_callback(connection_callback);
-
-	/* returns true if a listener was removed */
-	bool remove_disconnection_callback(const connection_callback_id& dcb_id);
-
-	const breep::tcp::peer& me() {
-		return dual_network.self();
+	const std::string& me() const {
+		return local_name;
 	}
 
 	~p2pchat();
+
+	template <typename T>
+	void send_to(const std::string& target, T&& value);
 
 private:
 
@@ -96,9 +83,17 @@ private:
 
 	void local_sound_input();
 
+	std::string local_name{};
+
 	breep::tcp::network dual_network;
 	std::mutex peers_map_mutex{};
-	std::unordered_map<boost::uuids::uuid, breep::tcp::peer, boost::hash<boost::uuids::uuid>> peers_map{};
+	std::unordered_map<std::string, breep::tcp::peer> peers_by_name{};
+	std::unordered_map<boost::uuids::uuid, std::string, boost::hash<boost::uuids::uuid>> peers_name_by_id{};
+
+	std::mutex connection_mutex{};
+	std::mutex disconnection_mutex{};
+	std::vector<connection_callback> co_listeners;
+	std::vector<connection_callback> dc_listeners;
 
 	sound_sender s_sender{};
 
@@ -107,7 +102,7 @@ private:
 
 	std::atomic_bool should_quit{false};
 	std::mutex sound_targets_mutex{};
-	std::unordered_set<boost::uuids::uuid, boost::hash<boost::uuids::uuid>> sound_targets{};
+	std::unordered_set<std::string> sound_targets{};
 	std::thread sound_sender_thread{};
 
 };

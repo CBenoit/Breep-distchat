@@ -101,8 +101,7 @@ display::connection_gui::connection_gui()
 	window.setFramerateLimit(60);
 
 	ImGui::SFML::Init(window);
-	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
-
+	ImGui::GetIO().IniFilename = nullptr;
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowRounding = 0.f;
 }

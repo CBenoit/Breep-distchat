@@ -105,14 +105,12 @@ int main(int, char *[]) {
 			[&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](
 					breep::tcp::network& n, const breep::tcp::peer& p) {
 
-				connected_peers_mutex.lock();
+				std::lock_guard lg1(connected_peers_mutex);
 				for (auto&& peers_pair : connected_peers_uuids) {
 					n.send_object_to(p, peers_pair.second);
 				}
-				pending_peers_mutex.lock();
+				std::lock_guard lg2(pending_peers_mutex);
 				connected_peers_uuids.insert(pending_peers.extract(p.id()));
-				pending_peers_mutex.unlock();
-				connected_peers_mutex.unlock();
 			});
 
 	chat_network.set_connection_predicate([&pending_peers, &pending_peers_mutex](const breep::tcp::peer& p) {

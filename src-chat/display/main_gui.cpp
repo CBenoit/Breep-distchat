@@ -37,30 +37,6 @@
 
 namespace {
 	std::atomic<bool> instantiaded{false};
-	const std::hash<std::string> str_hasher{};
-
-	constexpr display::colors all_colors[] = {
-			display::colors::red,
-			display::colors::blue,
-			display::colors::green,
-			display::colors::cyan,
-			display::colors::pink,
-			display::colors::yellow
-	};
-
-
-	ImVec4 imgui_color(display::colors color) {
-		return {
-				static_cast<float>(static_cast<unsigned int>(color) >> 16u & 0xFF) / 255.f,
-				static_cast<float>(static_cast<unsigned int>(color) >> 8u & 0xFF) / 255.f,
-				static_cast<float>(static_cast<unsigned int>(color) >> 0u & 0xFF) / 255.f,
-				1.f
-		};
-	}
-
-	ImVec4 author_color(const std::string& str) {
-		return imgui_color(all_colors[str_hasher(str) % std::size(all_colors)]);
-	}
 }
 
 bool display::is_instanciated() {
@@ -153,66 +129,33 @@ void display::main_gui::update_frame() {
 		};
 
 		Scoped(Menu("Users")) {
-			std::lock_guard lg{uuids_mutex};
-			for (auto&& item : uuids_names) {
-				if (ImGui::MenuItem(item.second.data())) {
-					focused_uuid = item.first;
+			std::lock_guard lg{msg_mutex};
+			for (auto&& item : messages) {
+				if (ImGui::MenuItem(item.first.data())) {
+					focused_user = item.first;
 				}
 			}
 		};
 	};
 
+	bool can_send_msgs = false;
 	Scoped(Child(ImGui::GetID("chat"),
 	             ImVec2(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y - 60)))) {
-		update_chat_frame();
+		if (focused_user) {
+			auto msgs = messages.find(focused_user.value());
+			if (msgs != messages.end()) {
+				msgs->second.print();
+				can_send_msgs = msgs->second.can_send_messages;
+			}
+		}
 	};
 
 	// input area
 	if (ImGui::InputTextMultiline("text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
 	                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue |
-	                              ImGuiInputTextFlags_AllowTabInput)) {
+	                              ImGuiInputTextFlags_AllowTabInput | (can_send_msgs ? 0 : ImGuiInputTextFlags_ReadOnly))) {
 		textinput_callback(std::string_view(textinput_buffer.data()));
 		textinput_buffer[0] = '\0';
 		ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
-	}
-}
-
-void display::main_gui::update_chat_frame() {
-	auto msgs = messages.find(focused_uuid);
-	auto sys_msgs = sys_messages.find(focused_uuid);
-	if (msgs != messages.end() && sys_msgs != sys_messages.end()) {
-		auto print_message = [](const message& msg) {
-			ImGui::PushTextWrapPos();
-			ImGui::TextColored(author_color(msg.author), "%s:", msg.author.data());
-			ImGui::SameLine();
-			ImGui::TextColored(imgui_color(colors::white), "%s", msg.content.data());
-			ImGui::PopTextWrapPos();
-		};
-
-		auto print_system_message = [](const sys_message& msg) {
-			ImGui::PushTextWrapPos();
-			ImGui::TextColored(imgui_color(colors::system), "%s", msg.content.data());
-			ImGui::PopTextWrapPos();
-		};
-
-		std::lock_guard lg(msg_mutex);
-		auto msg_it = msgs->second.cbegin();
-		auto sys_it = sys_msgs->second.cbegin();
-
-		while (msg_it != msgs->second.cend() && sys_it != sys_msgs->second.cend()) {
-			if (msg_it->position < sys_it->position) {
-				print_message(*msg_it++);
-			} else {
-				print_system_message(*sys_it++);
-			}
-		}
-
-		while (msg_it != msgs->second.cend()) {
-			print_message(*msg_it++);
-		}
-
-		while (sys_it != sys_msgs->second.cend()) {
-			print_system_message(*sys_it++);
-		}
 	}
 }

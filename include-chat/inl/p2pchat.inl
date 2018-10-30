@@ -23,27 +23,51 @@
  *                                                                                   *
  *************************************************************************************/
 
-#include <p2pchat.hpp>
 #include <sound_def.hpp>
 #include <audio_source.hpp>
 #include <commands.hpp>
+#include <breep/network/tcp.hpp>
 
-#include "p2pchat.hpp"
+#include "peer_recap.hpp"
 
 inline p2pchat::p2pchat(unsigned short local_port)
 		: dual_network{local_port}, sound_sender_thread{[this]() { local_sound_input(); }} {
+
 	dual_network.set_log_level(breep::log_level::debug);
 	dual_network.add_data_listener<sound_buffer_t>([this](auto& value) { network_sound_input_callback(value); });
-	dual_network.add_connection_listener([this](auto&, const breep::tcp::peer& p) {
-		std::lock_guard lg(peers_map_mutex);
-		peers_map.emplace(p.id(), p);
-	});
+
 	dual_network.add_disconnection_listener([this](auto&, const breep::tcp::peer& p) {
+		std::optional<peer_recap> pr;
+
 		peers_map_mutex.lock();
-		peers_map.erase(p.id());
+		if (auto it = peers_name_by_id.find(p.id()) ; it != peers_name_by_id.end()) {
+			peers_by_name.erase(it->second);
+			sound_targets_mutex.lock();
+			sound_targets.erase(it->second);
+			sound_targets_mutex.unlock();
+			peers_name_by_id.erase(it);
+			pr = peer_recap(it->second, p.id());
+		}
 		peers_map_mutex.unlock();
-		std::lock_guard lg(sound_targets_mutex);
-		sound_targets.erase(p.id());
+
+		if (pr) {
+			std::lock_guard lg(disconnection_mutex);
+			for (auto&& listener : dc_listeners) {
+				listener(*pr);
+			}
+		}
+	});
+
+	dual_network.add_data_listener<peer_recap>([this](breep::tcp::netdata_wrapper<peer_recap>& recap) {
+		peers_map_mutex.lock();
+		peers_by_name.emplace(recap.data.name(), recap.source);
+		peers_name_by_id.emplace(recap.source.id(), recap.data.name());
+		peers_map_mutex.unlock();
+
+		std::lock_guard lg(connection_mutex);
+		for (auto&& listener : co_listeners) {
+			listener(recap.data);
+		}
 	});
 }
 
@@ -77,7 +101,9 @@ inline void p2pchat::local_sound_input() {
 			std::scoped_lock sl(sound_targets_mutex, peers_map_mutex);
 			s_sender.update_sample();
 			for (auto&& sound_target : sound_targets) {
-				s_sender.send_sample_to(dual_network, peers_map.at(sound_target));
+				if (auto it = peers_by_name.find(sound_target) ; it != peers_by_name.end()) {
+					s_sender.send_sample_to(dual_network, it->second);
+				}
 			}
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(90));
@@ -93,56 +119,46 @@ inline p2pchat::~p2pchat() {
 }
 
 template<typename T>
-void p2pchat::send_to(const breep::tcp::peer& target, const T& value) {
-	static_assert(!std::is_same_v<std::remove_cv_t<T>, char*>, "You should not send char*");
-	dual_network.send_object_to(target, value);
-}
+void p2pchat::add_callback(callback <T> cb) {
+	dual_network.add_data_listener<T>([this, c = std::move(cb)](breep::tcp::netdata_wrapper<T>& value) {
 
-template<typename T>
-inline p2pchat::callback_id p2pchat::add_callback(callback <T> cb) {
-	return dual_network.add_data_listener<T>([c = std::move(cb)](breep::tcp::netdata_wrapper<T>& value) {
-		c(value.data, value.source);
+		std::optional<peer_recap> pr;
+		peers_map_mutex.lock();
+		if (auto it = peers_name_by_id.find(value.source.id()) ; it != peers_name_by_id.end()) {
+			pr = peer_recap(it->second, value.source.id(), connection_state::accepted);
+		}
+		peers_map_mutex.unlock();
+
+		if (pr) {
+			c(value.data, *pr);
+		}
 	});
 }
 
-inline bool p2pchat::remove_callback(const callback_id& cb_id) {
-	return dual_network.remove_data_listener(cb_id);
+inline void p2pchat::add_connection_callback(connection_callback cb) {
+	std::lock_guard lg{connection_mutex};
+	co_listeners.emplace_back(std::move(cb));
 }
 
-inline p2pchat::connection_callback_id p2pchat::add_connection_callback(connection_callback cb) {
-	return dual_network.add_connection_listener([this, callback = std::move(cb)](auto&, const breep::tcp::peer& peer) {
-		callback(peer);
-	});
+inline void p2pchat::add_disconnection_callback(connection_callback cb) {
+	std::lock_guard lg{disconnection_mutex};
+	dc_listeners.emplace_back(std::move(cb));
 }
 
-inline bool p2pchat::remove_connection_callback(const connection_callback_id& ccb_id) {
-	return dual_network.remove_connection_listener(ccb_id);
-}
-
-inline p2pchat::connection_callback_id p2pchat::add_disconnection_callback(connection_callback cb) {
-	return dual_network.add_disconnection_listener([c = std::move(cb)](auto&, const breep::tcp::peer& peer) {
-		c(peer);
-	});
-}
-
-inline bool p2pchat::remove_disconnection_callback(const connection_callback_id& dcb_id) {
-	return dual_network.remove_disconnection_listener(dcb_id);
-}
-
-inline void p2pchat::add_sound_target(const breep::tcp::peer& p) {
-	add_sound_target(p.id());
-}
-
-inline void p2pchat::add_sound_target(const boost::uuids::uuid& p) {
+inline void p2pchat::add_sound_target(const std::string& p) {
 	std::lock_guard lg(sound_targets_mutex);
 	sound_targets.emplace(p);
 }
 
-inline void p2pchat::remove_sound_target(const breep::tcp::peer& p) {
-	remove_sound_target(p.id());
-}
-
-inline void p2pchat::remove_sound_target(const boost::uuids::uuid& p) {
+inline void p2pchat::remove_sound_target(const std::string& p) {
 	std::lock_guard lg(sound_targets_mutex);
 	sound_targets.erase(p);
+}
+
+template <typename T>
+void p2pchat::send_to(const std::string& target, T&& value) {
+	std::lock_guard lg(peers_map_mutex);
+	if (auto it = peers_by_name.find(target) ; it != peers_by_name.end()) {
+		dual_network.send_object_to<T>(it->second, value);
+	}
 }

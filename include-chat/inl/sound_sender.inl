@@ -58,7 +58,7 @@ inline void sound_sender::send_sample(const breep::tcp::network& net) noexcept {
 	net.send_object(buffer);
 }
 
-inline void sound_sender::send_sample_to(const breep::tcp::network& net, const breep::tcp::peer& peer) noexcept {
+inline void sound_sender::  send_sample_to(const breep::tcp::network& net, const breep::tcp::peer& peer) noexcept {
 	net.send_object_to(peer, buffer);
 }
 

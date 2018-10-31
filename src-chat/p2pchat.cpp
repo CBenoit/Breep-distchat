@@ -71,7 +71,6 @@ void p2pchat::setup_listeners() {
 
 	dual_network.set_connection_predicate([this](const breep::tcp::peer& new_peer) {
 		if (server_id) {
-			std::cerr << "Incomming: " << new_peer.id() << ": " << std::boolalpha << (pending_peers.count(new_peer.id()) > 0) << '\n';
 			return pending_peers.count(new_peer.id()) > 0;
 		}
 		return true;
@@ -79,7 +78,6 @@ void p2pchat::setup_listeners() {
 
 	dual_network.add_connection_listener([this](breep::tcp::network& n, const breep::tcp::peer& new_peer) {
 		if (server_id) {
-			std::cerr << "Connecting: " << new_peer.id() << ": " << std::boolalpha << (pending_peers.count(new_peer.id()) > 0) << '\n';
 			auto it = pending_peers.find(new_peer.id());
 			if (it != pending_peers.end()) {
 				peers_map_mutex.lock();
@@ -106,7 +104,6 @@ void p2pchat::setup_listeners() {
 	});
 
 	dual_network.add_data_listener<peer_recap>([this](breep::tcp::netdata_wrapper<peer_recap>& recap) {
-		std::cerr << "Got peer recap: " << recap.data.name() << "\t" << recap.data.id() << ": " << std::boolalpha << (unmapped_peers.count(recap.data.id()) > 0) << '\n';
 		if (auto it = unmapped_peers.find(recap.data.id()) ; it != unmapped_peers.end()) {
 			peers_map_mutex.lock();
 			peers_by_name.emplace(recap.data.name(), it->second);

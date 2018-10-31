@@ -107,7 +107,7 @@ namespace display {
 			std::scoped_lock lock{msg_mutex};
 			peer_name_max_x_size = std::max(peer_name_max_x_size, ImGui::CalcTextSize(name_and_count.data()).x);
 			messages[username].can_send_messages = true;
-			new_messages[username] = 0;
+			++new_messages[username];
 		}
 
 		void remove_user(const std::string& username) {

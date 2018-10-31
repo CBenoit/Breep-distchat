@@ -16,16 +16,6 @@ namespace {
 			display::colors::yellow
 	};
 
-
-	ImVec4 imgui_color(display::colors color) {
-		return {
-				static_cast<float>(static_cast<unsigned int>(color) >> 16u & 0xFF) / 255.f,
-				static_cast<float>(static_cast<unsigned int>(color) >> 8u & 0xFF) / 255.f,
-				static_cast<float>(static_cast<unsigned int>(color) >> 0u & 0xFF) / 255.f,
-				1.f
-		};
-	}
-
 	ImVec4 author_color(const std::string& str) {
 		return imgui_color(all_colors[str_hasher(str) % std::size(all_colors)]);
 	}
@@ -37,11 +27,10 @@ void display::formatted_message::print() {
 		ImGui::PushStyleColor(ImGuiCol_Text, author_color(user_msg->author));
 		ImGui::TextUnformatted(user_msg->author.data(), user_msg->author.data() + user_msg->author.size());
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::white));
+		ImGui::PopStyleColor();
 		ImGui::TextUnformatted(": ");
 		ImGui::SameLine();
 		ImGui::TextUnformatted(user_msg->content.data(), user_msg->content.data() + user_msg->content.size());
-		ImGui::PopStyleColor(2);
 		ImGui::PopTextWrapPos();
 
 	} else if (auto sys_msg = std::get_if<system_message>(&msg)) {

@@ -46,8 +46,13 @@ namespace display {
 		pink = 0xFF69B4,
 		yellow = 0xFFD700,
 		white = 0xFFFFF0,
+		alert = 0x801341,
+		peer_connected = 0x32CD32,
+		peer_disconnected = 0xDC143C,
 		system = 0x6495ED
 	};
+
+	ImVec4 imgui_color(colors color, float alpha = 1.f);
 
 	bool is_instanciated();
 
@@ -87,7 +92,7 @@ namespace display {
 				source_messages->second.emplace_back(std::move(msg));
 			}
 			if (!focused_user || source != *focused_user) {
-				new_messages.emplace(source);
+				++new_messages[source];
 			}
 		}
 
@@ -95,9 +100,14 @@ namespace display {
 			textinput_callback = std::move(tic);
 		}
 
-		void add_user(std::string_view username) {
+		void add_user(const std::string& username) {
+			std::string name_and_count(username);
+			name_and_count += " (000)";
+
 			std::scoped_lock lock{msg_mutex};
-			messages[std::string(username)].can_send_messages = true;
+			peer_name_max_x_size = std::max(peer_name_max_x_size, ImGui::CalcTextSize(name_and_count.data()).x);
+			messages[username].can_send_messages = true;
+			new_messages[username] = 0;
 		}
 
 		void remove_user(const std::string& username) {
@@ -106,6 +116,7 @@ namespace display {
 			if (source_messages != messages.end()) {
 				source_messages->second.can_send_messages = false;
 			}
+			++new_messages[username];
 		}
 
 		const std::optional<std::string>& get_focused_name() const {
@@ -114,9 +125,11 @@ namespace display {
 
 	private:
 		void update_frame();
+		void update_chat_area();
+		void update_peers_area();
+		void update_menu_bar();
 
-		ImVec4 new_message_color{0.502f, 0.075f, 0.256f, 1.f};
-		ImVec4 pop_up_new_message_color{0.502f, 0.075f, 0.256f, 1.f};
+		float peer_name_max_x_size{30.f};
 
 		theme_fnct new_theme{nullptr};
 		theme_fnct current_theme{nullptr};
@@ -127,7 +140,7 @@ namespace display {
 
 		std::mutex msg_mutex{};
 		std::unordered_map<std::string, msg_list> messages{};
-		std::set<std::string> new_messages{};
+		std::unordered_map<std::string, int> new_messages{};
 
 		std::string textinput_buffer{};
 

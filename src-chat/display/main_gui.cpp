@@ -30,6 +30,9 @@
 #include <SFML/Window/Event.hpp>
 #include <imgui-SFML.h>
 #include <imgui.h>
+#include <display/main_gui.hpp>
+#include <imgui_internal.h>
+
 
 #include "display/main_gui.hpp"
 #include "display/imgui_helper.hpp"
@@ -37,6 +40,15 @@
 
 namespace {
 	std::atomic<bool> instantiaded{false};
+}
+
+ImVec4 display::imgui_color(colors color, float alpha) {
+	return {
+			static_cast<float>(static_cast<unsigned int>(color) >> 16u & 0xFF) / 255.f,
+			static_cast<float>(static_cast<unsigned int>(color) >> 8u & 0xFF) / 255.f,
+			static_cast<float>(static_cast<unsigned int>(color) >> 0u & 0xFF) / 255.f,
+			alpha
+	};
 }
 
 bool display::is_instanciated() {
@@ -96,71 +108,36 @@ bool display::main_gui::display() {
 	ImGui::SetNextWindowSize(ImVec2{static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
 	ImGui::SetNextWindowPos({});
 
-	bool should_change_color = !new_messages.empty();
-	if (should_change_color) {
-		std::swap(new_message_color, ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
-	}
-
-	ImGui::Begin("Main", nullptr, frame_flags);
-
+	ImGui::Begin("##Main", nullptr, frame_flags);
 	update_frame();
-
 	ImGui::End();
+
 	window.clear();
 	ImGui::SFML::Render(window);
 	window.display();
 
-	if (should_change_color) {
-		std::swap(new_message_color, ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg]);
-	}
 	return true;
 }
 
 void display::main_gui::update_frame() {
-	auto theme_entry = [this](const char* theme_name, theme_fnct theme) {
-		if (ImGui::MenuItem(theme_name, nullptr, current_theme == theme)) {
-			new_theme = theme;
-		}
+	update_menu_bar();
+
+	Scoped(Child(ImGui::GetID("Chat_area"), ImVec2{-(peer_name_max_x_size + 20.f), 0})) {
+		update_chat_area();
 	};
-
-	Scoped(MenuBar()) {
-		Scoped(Menu("Options")) {
-			Scoped(Menu("Color theme")) {
-				theme_entry("Cherry", theme::cherry);
-				theme_entry("Dark", theme::dark);
-				theme_entry("Itamago Dark", theme::dark_itamago);
-//				theme_entry("Itamago Light", theme::light_itamago);
-//				theme_entry("Microsoft Light", theme::MicrosoftLight);
-				theme_entry("Unity Engine 4", theme::UE4);
-			};
-			if (ImGui::MenuItem("Quit")) {
-				window.close();
-			}
-		};
-
-		std::string select_user_menu_name = "Select user";
-		std::lock_guard lg{msg_mutex};
-		if (!new_messages.empty()) {
-			select_user_menu_name += " (" + std::to_string(new_messages.size()) + ")";
-		}
-		Scoped(Menu(select_user_menu_name.data())) {
-			for (auto&& item : messages) {
-				std::string entry_name = item.first;
-				if (new_messages.count(item.first)) {
-					entry_name += " (!)";
-				}
-
-				if (ImGui::MenuItem(entry_name.data(), nullptr, focused_user ? *focused_user == item.first : false)) {
-					focused_user = item.first;
-					new_messages.erase(item.first);
-				}
-			}
-		};
+	ImGui::SameLine();
+	ImGui::VerticalSeparator();
+	ImGui::SameLine();
+	Scoped(Child(ImGui::GetID("Peers_area"))) {
+		update_peers_area();
 	};
+}
 
+void display::main_gui::update_chat_area() {
 	bool can_send_msgs = false;
 	Scoped(Child(ImGui::GetID("chat"),
 	             ImVec2(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y - 60)))) {
+		std::lock_guard lg(msg_mutex);
 		if (focused_user) {
 			auto msgs = messages.find(focused_user.value());
 			if (msgs != messages.end()) {
@@ -178,11 +155,68 @@ void display::main_gui::update_frame() {
 			textinput_buffer[0] = '\0';
 			ImGui::SetKeyboardFocusHere(-1);
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("##button", {10.f,10.f})) {
-			// Send Sound
-		}
 	} else {
 		ImGui::TextUnformatted("No connected user selected.");
 	}
+}
+
+void display::main_gui::update_peers_area() {
+
+	constexpr char contact_text[] = "Contacts";
+	ImVec2 text_size = ImGui::CalcTextSize(contact_text);
+	ImGui::SetCursorPosX((ImGui::GetContentRegionAvailWidth() - text_size.x) / 2);
+	ImGui::TextUnformatted(contact_text);
+
+	ImGui::Separator();
+
+	std::lock_guard lg(msg_mutex);
+
+	for (auto&& item : messages) {
+		std::string text = item.first;
+		int count = new_messages[text];
+		bool is_selected = focused_user && focused_user.value() == item.first;
+		if (count > 0) {
+			text += " (" + std::to_string(count) + ')';
+			ImGui::PushStyleColor(ImGuiCol_Header, imgui_color(colors::alert, 0.75f));
+			is_selected = true;
+		}
+
+		if (item.second.can_send_messages) {
+			ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::peer_connected, 0.75f));
+		} else {
+			ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::peer_disconnected, 0.75f));
+		}
+
+		if (ImGui::Selectable(text.data(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+			focused_user = item.first;
+			new_messages[item.first] = 0;
+		}
+
+		ImGui::PopStyleColor(count > 0 ? 2 : 1);
+	}
+}
+
+void display::main_gui::update_menu_bar() {
+	auto theme_entry = [this](const char* theme_name, theme_fnct theme) {
+		if (ImGui::MenuItem(theme_name, nullptr, current_theme == theme)) {
+			new_theme = theme;
+		}
+	};
+
+	Scoped(MenuBar()) {
+		Scoped(Menu("Options")) {
+			Scoped(Menu("Color theme")) {
+				theme_entry("Cherry", theme::cherry);
+				theme_entry("Dark", theme::dark);
+				theme_entry("Itamago Dark", theme::dark_itamago);
+				theme_entry("Itamago Light", theme::light_itamago);
+				theme_entry("Microsoft Light", theme::MicrosoftLight);
+				theme_entry("Unity Engine 4", theme::UE4);
+			};
+			if (ImGui::MenuItem("Quit")) {
+				window.close();
+			}
+		};
+	};
+
 }

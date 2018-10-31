@@ -53,9 +53,9 @@ int main(int argc, char* argv[]) {
 	connection_fields fields;
 	for (display::connection_gui cgui; !fields; fields = cgui.show(fields)) {}
 
+	display::main_gui gui;
 	p2pchat chat{*fields.local_port};
 
-	display::main_gui gui;
 	audio_source::init();
 
 	chat.add_connection_callback([&gui](const peer_recap& pr) {

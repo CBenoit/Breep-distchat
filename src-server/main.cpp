@@ -95,6 +95,13 @@ int main(int, char *[]) {
 		}
 	});
 
+	chat_network.add_data_listener<get_info>([&connected_peers_uuids, &connected_peers_mutex](breep::tcp::netdata_wrapper<get_info>& wrapper) {
+		std::lock_guard lg(connected_peers_mutex);
+		if (auto it = connected_peers_uuids.find(wrapper.data.peer_id) ; it != connected_peers_uuids.end()) {
+			wrapper.network.send_object_to(wrapper.source, it->second);
+		}
+	});
+
 	chat_network.add_disconnection_listener(
 			[&connected_peers_uuids, &connected_peers_mutex](breep::tcp::network&, const breep::tcp::peer& p) {
 				std::lock_guard lg(connected_peers_mutex);
@@ -103,19 +110,15 @@ int main(int, char *[]) {
 
 	chat_network.add_connection_listener(
 			[&pending_peers, &pending_peers_mutex, &connected_peers_uuids, &connected_peers_mutex](
-					breep::tcp::network& n, const breep::tcp::peer& p) {
+					breep::tcp::network&, const breep::tcp::peer& p) {
 
-				std::lock_guard lg1(connected_peers_mutex);
-				for (auto&& peers_pair : connected_peers_uuids) {
-					n.send_object_to(p, peers_pair.second);
-				}
-				std::lock_guard lg2(pending_peers_mutex);
+				std::scoped_lock lg(connected_peers_mutex, pending_peers_mutex);
 				connected_peers_uuids.insert(pending_peers.extract(p.id()));
 			});
 
 	chat_network.set_connection_predicate([&pending_peers, &pending_peers_mutex](const breep::tcp::peer& p) {
 		std::lock_guard ls(pending_peers_mutex);
-		return pending_peers.count(p.id()) != 0;
+		return pending_peers.count(p.id()) > 0;
 	});
 
 	chat_network.awake();

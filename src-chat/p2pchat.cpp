@@ -71,33 +71,61 @@ void p2pchat::setup_listeners() {
 
 	dual_network.set_connection_predicate([this](const breep::tcp::peer& new_peer) {
 		if (server_id) {
+			std::cerr << "Incomming: " << new_peer.id() << ": " << std::boolalpha << (pending_peers.count(new_peer.id()) > 0) << '\n';
 			return pending_peers.count(new_peer.id()) > 0;
 		}
 		return true;
 	});
 
-	dual_network.add_connection_listener([this](auto&, const breep::tcp::peer& new_peer) {
+	dual_network.add_connection_listener([this](breep::tcp::network& n, const breep::tcp::peer& new_peer) {
 		if (server_id) {
-			const peer_recap& pr = pending_peers.at(new_peer.id());
-			peers_map_mutex.lock();
-			peers_by_name.emplace(pr.name(), new_peer);
-			peers_name_by_id.emplace(new_peer.id(), pr.name());
-			peers_map_mutex.unlock();
+			std::cerr << "Connecting: " << new_peer.id() << ": " << std::boolalpha << (pending_peers.count(new_peer.id()) > 0) << '\n';
+			auto it = pending_peers.find(new_peer.id());
+			if (it != pending_peers.end()) {
+				peers_map_mutex.lock();
+				peers_by_name.emplace(it->second.name(), new_peer);
+				peers_name_by_id.emplace(new_peer.id(), it->second.name());
+				peers_map_mutex.unlock();
 
-			std::lock_guard lg(connection_mutex);
-			for (auto&& listener : co_listeners) {
-				listener(pr);
+				std::lock_guard lg(connection_mutex);
+				for (auto&& listener : co_listeners) {
+					listener(it->second);
+				}
+
+				pending_peers.erase(it);
+			} else {
+				unmapped_peers.emplace(new_peer.id(), new_peer);
+				if (unmapped_peers.size() == 1) {
+					n.send_object_to(server_id.value(), get_info(new_peer.id()));
+				}
 			}
 
-			pending_peers.erase(new_peer.id());
-
 		} else {
-			server_id = new_peer.id();
+			server_id.emplace(new_peer);
 		}
 	});
 
 	dual_network.add_data_listener<peer_recap>([this](breep::tcp::netdata_wrapper<peer_recap>& recap) {
-		pending_peers.emplace(recap.data.id(), recap.data);
+		std::cerr << "Got peer recap: " << recap.data.name() << "\t" << recap.data.id() << ": " << std::boolalpha << (unmapped_peers.count(recap.data.id()) > 0) << '\n';
+		if (auto it = unmapped_peers.find(recap.data.id()) ; it != unmapped_peers.end()) {
+			peers_map_mutex.lock();
+			peers_by_name.emplace(recap.data.name(), it->second);
+			peers_name_by_id.emplace(recap.data.id(), recap.data.name());
+			peers_map_mutex.unlock();
+
+			std::lock_guard lg(connection_mutex);
+			for (auto&& listener : co_listeners) {
+				listener(recap.data);
+			}
+
+			unmapped_peers.erase(it);
+
+			if (!unmapped_peers.empty()) {
+				recap.network.send_object_to(server_id.value(), get_info(unmapped_peers.begin()->first));
+			}
+		} else {
+			pending_peers.emplace(recap.data.id(), recap.data);
+		}
 	});
 
 	dual_network.add_data_listener<sound_buffer_t>([this](auto& value) { network_sound_input_callback(value); });

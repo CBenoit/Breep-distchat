@@ -172,11 +172,15 @@ void display::main_gui::update_frame() {
 
 	if (can_send_msgs) {
 		// input area
-		if (ImGui::InputTextMultiline("##text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-1.f, -1.f},
+		if (ImGui::InputTextMultiline("##text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-15.f, -1.f},
 		                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine)) {
 			textinput_callback(std::string_view(textinput_buffer.data()));
 			textinput_buffer[0] = '\0';
-			ImGui::SetKeyboardFocusHere(-1); // auto focus previous widget
+			ImGui::SetKeyboardFocusHere(-1);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("##button", {10.f,10.f})) {
+			// Send Sound
 		}
 	} else {
 		ImGui::TextUnformatted("No connected user selected.");

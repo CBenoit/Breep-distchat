@@ -18,11 +18,6 @@ get_filename_component(SFML_dir         ${root_dir}/external/SFML         REALPA
 get_filename_component(imgui_dir        ${root_dir}/external/imgui        REALPATH)
 get_filename_component(imgui-sfml_dir   ${root_dir}/external/imgui-sfml   REALPATH)
 
-# By default build in Release mode
-if( NOT CMAKE_BUILD_TYPE )
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
-
 # Add SFML targets
 add_subdirectory(${SFML_dir})
 

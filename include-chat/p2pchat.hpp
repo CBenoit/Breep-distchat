@@ -90,12 +90,13 @@ private:
 	void clear_listeners();
 
 	std::string local_name{};
-	std::optional<boost::uuids::uuid> server_id{};
+	std::optional<breep::tcp::peer> server_id{};
 	uuid_map<peer_recap> pending_peers{};
 
 	breep::tcp::network dual_network;
 	std::mutex peers_map_mutex{};
 	std::unordered_map<std::string, breep::tcp::peer> peers_by_name{};
+	uuid_map<breep::tcp::peer> unmapped_peers{};
 
 	uuid_map<std::string> peers_name_by_id{};
 

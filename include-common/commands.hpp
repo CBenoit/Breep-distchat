@@ -2,6 +2,9 @@
 #define SYSDIST_SERVER_COMMANDS_HPP
 
 #include <breep/util/serialization.hpp>
+#include <boost/uuid/nil_generator.hpp>
+
+#include "uuid_serialize.hpp"
 
 // Send to server to create an account
 struct create_account {
@@ -21,6 +24,17 @@ struct connect_account {
 	BREEP_ENABLE_SERIALIZATION(connect_account, username, password)
 };
 // answer: connection_result
+
+// Send to server to request a peer_recap
+struct get_info {
+	get_info() = default;
+	explicit get_info(const boost::uuids::uuid& id) : peer_id(id) {}
+
+	boost::uuids::uuid peer_id{boost::uuids::nil_uuid()};
+
+	BREEP_ENABLE_SERIALIZATION(get_info, peer_id)
+};
+// answer: peer_recap
 
 enum class connection_state : uint8_t {
 	accepted,
@@ -52,6 +66,7 @@ namespace connection_results {
 	}
 }
 
+BREEP_DECLARE_TYPE(get_info)
 BREEP_DECLARE_TYPE(connection_result)
 BREEP_DECLARE_TYPE(connection_state)
 BREEP_DECLARE_TYPE(connect_account)

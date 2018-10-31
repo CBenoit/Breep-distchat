@@ -7,7 +7,7 @@
 class peer_info {
 public:
 
-	peer_info(const boost::uuids::uuid& id, std::string username, const std::string& password);
+	peer_info(const boost::uuids::uuid& id, std::string username_, const std::string& password);
 
 	bool password_matches(const std::string& s) const;
 

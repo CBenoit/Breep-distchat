@@ -34,7 +34,10 @@
 
 class sound_sender {
 public:
-	explicit sound_sender() noexcept;
+
+	static std::optional<sound_sender> try_build();
+
+	sound_sender();
 
 	sound_sender(sound_sender&& other) noexcept;
 

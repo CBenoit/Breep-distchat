@@ -30,8 +30,9 @@
 #include <mutex>
 #include <functional>
 #include <iostream>
-#include <boost/uuid/uuid.hpp>
+#include <thread>
 
+#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/nil_generator.hpp>
 #include <boost/container_hash/extensions.hpp>
 
@@ -43,6 +44,7 @@
 
 #include "formatted_message.hpp"
 #include "sound_def.hpp"
+#include "sound_sender.hpp"
 
 namespace display {
 	enum class colors {
@@ -116,6 +118,10 @@ namespace display {
 			call_request_callback = std::move(crc);
 		}
 
+		void set_sound_sender_callback(std::function<void(const std::string&, sound_sender&)> ssc) {
+			sound_sender_callback = std::move(ssc);
+		}
+
 		void add_user(const std::string& username) {
 			std::string name_and_count(username);
 			name_and_count += " (000)";
@@ -158,6 +164,8 @@ namespace display {
 
 		void lockless_add_message(const std::string& source, formatted_message&& msg);
 
+		void process_mic();
+
 		// Display variables //
 		float peer_name_max_x_size{50.f};
 		float peer_name_y_size{0.f};
@@ -189,6 +197,13 @@ namespace display {
 		std::set<std::string> ongoing_calls{};
 		std::set<std::string> requests_in{};
 		std::set<std::string> requests_out{};
+
+		// mic
+		std::function<void(const std::string&, sound_sender&)> sound_sender_callback{[](auto&&...){}};
+		std::atomic<bool> should_stop{false};
+		std::mutex mic_stopper{};
+		std::thread mic_recorder{[this]{process_mic();}};
+		static constexpr std::chrono::duration mic_update_interval{std::chrono::milliseconds(100)};
 
 	};
 }

@@ -28,11 +28,22 @@
 #include <AL/alc.h>
 #include <sound_sender.hpp>
 
+inline std::optional<sound_sender> sound_sender::try_build() {
+	try {
+		sound_sender s{};
+		return {std::move(s)};
+	} catch (const std::runtime_error&) {
+		return {};
+	}
+}
 
-inline sound_sender::sound_sender() noexcept {
+inline sound_sender::sound_sender() {
 
 	// Request the default capture device with a half-second buffer
 	input_device = alcCaptureOpenDevice(nullptr, cst::frequency, AL_FORMAT_MONO16, cst::frequency / 2);
+	if (!input_device) {
+		throw std::runtime_error("No microphone found.");
+	}
 	alcCaptureStart(input_device);
 }
 

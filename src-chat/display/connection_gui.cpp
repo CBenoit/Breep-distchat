@@ -149,7 +149,6 @@ connection_fields display::connection_gui::show(const connection_fields& fields)
 		ImGui::SetNextWindowPos({});
 		ImGui::Begin("Main", nullptr, frame_flags);
 
-		// TODO HERE
 		ImGui::Text("      Username: ");
 		ImGui::SameLine();
 		ImGui::InputText("##Username", username, std::size(username));

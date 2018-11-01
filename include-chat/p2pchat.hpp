@@ -49,19 +49,7 @@ public:
 
 	explicit p2pchat(unsigned short local_port);
 
-	p2pchat(unsigned short local_port, boost::asio::ip::address_v4 connection_address, unsigned short forward_port);
-
-	void awake();
-
 	connection_state connect_to(const connection_fields& cfields);
-
-	void send_voice(bool should_send = true);
-
-	void mute_sound_input(bool muted);
-
-	void add_sound_target(const std::string& p);
-
-	void remove_sound_target(const std::string& p);
 
 	template<typename T>
 	void add_callback(callback<T>);
@@ -80,10 +68,6 @@ public:
 	void send_to(const std::string& target, T&& value);
 
 private:
-
-	void network_sound_input_callback(breep::tcp::netdata_wrapper<sound_buffer_t>&);
-
-	void local_sound_input();
 
 	void setup_listeners();
 
@@ -104,16 +88,6 @@ private:
 	std::mutex disconnection_mutex{};
 	std::vector<connection_callback> co_listeners{};
 	std::vector<connection_callback> dc_listeners{};
-
-	sound_sender s_sender{};
-
-	std::atomic_bool sending_voice{false};
-	std::atomic_bool sound_input_muted{false};
-
-	std::atomic_bool should_quit{false};
-	std::mutex sound_targets_mutex{};
-	std::unordered_set<std::string> sound_targets{};
-	std::thread sound_sender_thread{};
 
 };
 

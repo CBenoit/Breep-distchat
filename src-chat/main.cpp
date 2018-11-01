@@ -44,19 +44,14 @@
 
 BREEP_DECLARE_TYPE(std::string)
 
-void sender();
-
-void receiver();
-
-int main(int argc, char* argv[]) {
+int main(int, char*[]) {
+	using display::call_request;
 
 	connection_fields fields;
 	for (display::connection_gui cgui; !fields; fields = cgui.show(fields)) {}
 
 	display::main_gui gui;
 	p2pchat chat{*fields.local_port};
-
-	audio_source::init();
 
 	chat.add_connection_callback([&gui](const peer_recap& pr) {
 		gui.add_user(pr.name());
@@ -70,6 +65,14 @@ int main(int argc, char* argv[]) {
 
 	chat.add_callback<std::string>([&gui](const std::string& data, const peer_recap& source) {
 		gui.add_message(source.name(), display::user_message{source.name(), data});
+	});
+
+	chat.add_callback<sound_buffer_t>([&gui](const sound_buffer_t& data, const peer_recap& source) {
+		gui.sound_input(source.name(), data);
+	});
+
+	chat.add_callback<call_request>([&gui](const call_request& data, const peer_recap& source) {
+		gui.call_request_input(source.name(), data);
 	});
 
 	if (connection_state st = chat.connect_to(fields); st != connection_state::accepted) {
@@ -103,6 +106,10 @@ int main(int argc, char* argv[]) {
 		if (gui.get_focused_name()) {
 			chat.send_to(gui.get_focused_name().value(), s);
 		}
+	});
+
+	gui.set_call_request_callback([&chat](const std::string& target, const call_request& rq) {
+		chat.send_to(target, rq);
 	});
 
 	while (gui.display());

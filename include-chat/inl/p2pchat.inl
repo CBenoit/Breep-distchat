@@ -30,36 +30,9 @@
 
 #include "peer_recap.hpp"
 
-inline p2pchat::p2pchat(unsigned short local_port, boost::asio::ip::address_v4 connection_address,
-                        unsigned short forward_port)
-		: p2pchat(local_port) {
-	dual_network.connect(connection_address, forward_port);
-}
-
-inline void p2pchat::awake() {
-	dual_network.awake();
-}
-
-inline void p2pchat::send_voice(bool should_send) {
-	sending_voice = should_send;
-}
-
-inline void p2pchat::mute_sound_input(bool muted) {
-	sound_input_muted = muted;
-}
-
-inline void p2pchat::network_sound_input_callback(breep::tcp::netdata_wrapper<sound_buffer_t>& value) {
-	if (!sound_input_muted) {
-		audio_source::play(value.data);
-	}
-}
 
 inline p2pchat::~p2pchat() {
-	should_quit = true;
 	dual_network.disconnect();
-	if (sound_sender_thread.joinable()) {
-		sound_sender_thread.join();
-	}
 }
 
 template<typename T>
@@ -87,16 +60,6 @@ inline void p2pchat::add_connection_callback(connection_callback cb) {
 inline void p2pchat::add_disconnection_callback(connection_callback cb) {
 	std::lock_guard lg{disconnection_mutex};
 	dc_listeners.emplace_back(std::move(cb));
-}
-
-inline void p2pchat::add_sound_target(const std::string& p) {
-	std::lock_guard lg(sound_targets_mutex);
-	sound_targets.emplace(p);
-}
-
-inline void p2pchat::remove_sound_target(const std::string& p) {
-	std::lock_guard lg(sound_targets_mutex);
-	sound_targets.erase(p);
 }
 
 template <typename T>

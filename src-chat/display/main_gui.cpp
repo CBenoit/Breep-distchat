@@ -37,9 +37,15 @@
 #include "display/main_gui.hpp"
 #include "display/imgui_helper.hpp"
 #include "display/imgui_theming.hpp"
+#include "audio_source.hpp"
 
 namespace {
 	std::atomic<bool> instantiaded{false};
+
+	template <typename T>
+	bool try_erase(std::set<T>& s, const T& val) {
+		return s.erase(val) > 0;
+	}
 }
 
 ImVec4 display::imgui_color(colors color, float alpha) {
@@ -122,14 +128,28 @@ bool display::main_gui::display() {
 void display::main_gui::update_frame() {
 	update_menu_bar();
 
-	Scoped(Child(ImGui::GetID("Chat_area"), ImVec2{-(peer_name_max_x_size + 20.f), 0})) {
+	Scoped(Child(ImGui::GetID("Chat_area"), ImVec2{-(peer_name_max_x_size + 45.f + call_state_width), 0.f})) {
 		update_chat_area();
 	};
+
 	ImGui::SameLine();
 	ImGui::VerticalSeparator();
 	ImGui::SameLine();
-	Scoped(Child(ImGui::GetID("Peers_area"))) {
-		update_peers_area();
+
+	Scoped(Child(ImGui::GetID("Left_panel"))) {
+		Scoped(Child(ImGui::GetID("Peers_area"), ImVec2{-(call_state_width - 10.f), ImGui::GetContentRegionAvail().y / 2})) {
+			update_peers_area();
+		};
+		ImGui::SameLine();
+		Scoped(Child(ImGui::GetID("Call_area"), ImVec2{0.f, ImGui::GetContentRegionAvail().y / 2})) {
+			update_call_state();
+		};
+
+		ImGui::Separator();
+
+		Scoped(Child(ImGui::GetID("Disconnected_peers_area"))) {
+			update_dc_peers_area();
+		};
 	};
 }
 
@@ -149,12 +169,14 @@ void display::main_gui::update_chat_area() {
 
 	if (can_send_msgs) {
 		// input area
-		if (ImGui::InputTextMultiline("##text_input", textinput_buffer.data(), textinput_buffer.capacity(), {-15.f, -1.f},
-		                              ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine)) {
+		ImGui::PushItemWidth(-15.f);
+		if (ImGui::InputText("##text_input", textinput_buffer.data(), textinput_buffer.capacity()
+				, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 			textinput_callback(std::string_view(textinput_buffer.data()));
 			textinput_buffer[0] = '\0';
 			ImGui::SetKeyboardFocusHere(-1);
 		}
+		ImGui::PopItemWidth();
 	} else {
 		ImGui::TextUnformatted("No connected user selected.");
 	}
@@ -170,29 +192,105 @@ void display::main_gui::update_peers_area() {
 	ImGui::Separator();
 
 	std::lock_guard lg(msg_mutex);
-
 	for (auto&& item : messages) {
-		std::string text = item.first;
-		int count = new_messages[text];
-		bool is_selected = focused_user && focused_user.value() == item.first;
-		if (count > 0) {
-			text += " (" + std::to_string(count) + ')';
-			ImGui::PushStyleColor(ImGuiCol_Header, imgui_color(colors::alert, 0.75f));
-			is_selected = true;
+		if (!item.second.can_send_messages) {
+			continue;
 		}
+		print_peer(item.first);
+	}
+}
 
+void display::main_gui::update_dc_peers_area() {
+
+	constexpr char disconncted_peers[] = "Disconnected peers";
+	ImVec2 text_size = ImGui::CalcTextSize(disconncted_peers);
+	ImGui::SetCursorPosX((ImGui::GetContentRegionAvailWidth() - text_size.x) / 2);
+	ImGui::TextUnformatted(disconncted_peers);
+
+	ImGui::Separator();
+
+	std::lock_guard lg(msg_mutex);
+	for (auto&& item : messages) {
 		if (item.second.can_send_messages) {
-			ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::peer_connected, 0.75f));
-		} else {
-			ImGui::PushStyleColor(ImGuiCol_Text, imgui_color(colors::peer_disconnected, 0.75f));
+			continue;
 		}
+		print_peer(item.first);
+	}
+}
 
-		if (ImGui::Selectable(text.data(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
-			focused_user = item.first;
-			new_messages[item.first] = 0;
+void display::main_gui::print_peer(const std::string& peer) {
+	std::string text = peer;
+	int count = new_messages[peer];
+	bool is_selected = focused_user && focused_user.value() == peer;
+	if (count > 0) {
+		text += " (" + std::to_string(count) + ')';
+		ImGui::PushStyleColor(ImGuiCol_Header, imgui_color(colors::alert, 0.75f));
+		is_selected = true;
+	}
+
+	if (ImGui::Selectable(text.data(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+		focused_user = peer;
+		new_messages[peer] = 0;
+	}
+
+	if (count > 0) {
+		ImGui::PopStyleColor();
+	}
+}
+
+void display::main_gui::update_call_state() {
+
+	constexpr char calls_text[] = "calls";
+	ImVec2 text_size = ImGui::CalcTextSize(calls_text);
+	ImGui::SetCursorPosX((ImGui::GetContentRegionAvailWidth() - text_size.x) / 2);
+	ImGui::TextUnformatted(calls_text);
+
+	ImGui::Separator();
+
+	std::scoped_lock sl(msg_mutex, call_mutex);
+	for (auto&& item : messages) {
+		ImGui::PushID(item.first.data());
+		if (item.second.can_send_messages) {
+			if (requests_in.count(item.first) > 0) {
+				Scoped(Child("Accept_child", ImVec2{ImGui::GetContentRegionAvailWidth() / 2, 0.f})) {
+					if (ImGui::Selectable("Accept")) {
+						ongoing_calls.insert(requests_in.extract(item.first));
+						call_request_callback(item.first, true);
+						lockless_add_message(item.first, system_message("Call accepted."));
+					}
+				};
+				ImGui::SameLine();
+				Scoped(Child("Deny_child")) {
+					if (ImGui::Selectable("Deny")) {
+						requests_in.erase(item.first);
+						call_request_callback(item.first, false);
+						lockless_add_message(item.first, system_message("Call denied."));
+					}
+				};
+
+			} else if (requests_out.count(item.first) > 0) {
+				if (ImGui::Selectable("Calling...")) {
+					requests_out.erase(item.first);
+					call_request_callback(item.first, false);
+					lockless_add_message(item.first, system_message("Call cancelled"));
+				}
+
+			} else if (ongoing_calls.count(item.first) > 0) {
+				if (ImGui::Selectable("Ongoing")) {
+					ongoing_calls.erase(item.first);
+					call_request_callback(item.first, false);
+					lockless_add_message(item.first, system_message("Call ended."));
+				}
+
+			} else {
+				if (ImGui::Selectable("Call")) {
+					requests_out.insert(item.first);
+					call_request_callback(item.first, true);
+					lockless_add_message(item.first, system_message("Calling..."));
+				}
+			}
 		}
-
-		ImGui::PopStyleColor(count > 0 ? 2 : 1);
+		ImGui::PopID();
 	}
 }
 
@@ -213,10 +311,61 @@ void display::main_gui::update_menu_bar() {
 				theme_entry("Microsoft Light", theme::MicrosoftLight);
 				theme_entry("Unity Engine 4", theme::UE4);
 			};
+			if (bool sm = sound_muted ; ImGui::MenuItem("Mute speakers", nullptr, sm)) {
+				sound_muted = !sm;
+			}
+			if (bool mm = mic_muted ; ImGui::MenuItem("Mute microphone", nullptr, mm)) {
+				mic_muted = !mm;
+			}
+			ImGui::Separator();
 			if (ImGui::MenuItem("Quit")) {
 				window.close();
 			}
 		};
 	};
 
+}
+
+void display::main_gui::sound_input(const std::string& source, const sound_buffer_t& sound) {
+	if (sound_muted || ongoing_calls.count(source) == 0) {
+		return;
+	}
+
+	audio_source::play(sound);
+}
+
+void display::main_gui::call_request_input(const std::string& source, const display::call_request& call) {
+
+	std::lock_guard lg(call_mutex);
+	if (call.rq_value) {
+		if (ongoing_calls.insert(requests_out.extract(source)).inserted) {
+			add_message(source, system_message("Call accepted."));
+		} else if (requests_in.count(source) == 0) {
+			requests_in.insert(source);
+			add_message(source, system_message("Incomming call..."));
+
+		}
+
+
+	} else {
+		if (try_erase(ongoing_calls, source)) {
+			add_message(source, system_message("Call ended."));
+
+		} else if (try_erase(requests_out, source)) {
+			add_message(source, system_message("Call denied."));
+
+		} else if (try_erase(requests_in, source)){
+			add_message(source, system_message("Call cancelled."));
+		}
+	}
+}
+
+void display::main_gui::lockless_add_message(const std::string& source, display::formatted_message&& msg) {
+	auto source_messages = messages.find(source);
+	if (source_messages != messages.end()) {
+		source_messages->second.emplace_back(std::move(msg));
+	}
+	if (!focused_user || source != *focused_user) {
+		++new_messages[source];
+	}
 }

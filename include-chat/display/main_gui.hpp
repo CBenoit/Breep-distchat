@@ -124,7 +124,7 @@ namespace display {
 
 		void add_user(const std::string& username) {
 			std::string name_and_count(username);
-			name_and_count += " (000)";
+			name_and_count += " (00)";
 
 			auto size = ImGui::CalcTextSize(name_and_count.data());
 			peer_name_max_x_size = std::max(peer_name_max_x_size, size.x);

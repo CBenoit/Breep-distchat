@@ -398,6 +398,7 @@ void display::main_gui::process_mic() {
 		} else {
 			sender = {};
 			mic_stopper.lock();
+			mic_stopper.unlock();
 		}
 
 		if (!sender) {

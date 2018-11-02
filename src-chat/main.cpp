@@ -67,10 +67,6 @@ int main(int, char*[]) {
 		gui.add_message(source.name(), display::user_message{source.name(), data});
 	});
 
-	chat.add_callback<sound_buffer_t>([&gui](const sound_buffer_t& data, const peer_recap& source) {
-		gui.sound_input(source.name(), data);
-	});
-
 	chat.add_callback<call_request>([&gui](const call_request& data, const peer_recap& source) {
 		gui.call_request_input(source.name(), data);
 	});
@@ -118,6 +114,14 @@ int main(int, char*[]) {
 
 	gui.set_call_end_callback([&chat](const std::string& target) {
 		chat.call_stop(target);
+	});
+
+	gui.set_mic_muting_callback([&chat](bool muted) {
+		chat.set_mic_disabled(muted);
+	});
+
+	gui.set_snd_muting_callback([&chat](bool muted) {
+		chat.set_sound_disabled(muted);
 	});
 
 	while (gui.display());

@@ -132,6 +132,17 @@ void p2pchat::setup_listeners() {
 		}
 
 	});
+
+	add_callback<sound_buffer_t>([this](const sound_buffer_t& sound, const peer_recap& target) {
+		mic_targets_mutex.lock();
+		auto count = mic_targets.count(target.name());
+		mic_targets_mutex.unlock();
+		
+		if (sound_muted || count == 0) {
+			return;
+		}
+		audio_source::play(sound);
+	});
 }
 
 void p2pchat::clear_listeners() {
@@ -157,7 +168,7 @@ void p2pchat::process_mic() {
 		auto starting_time = std::chrono::system_clock::now();
 
 		mic_targets_mutex.lock();
-		if (mic_targets.empty()) {
+		if (mic_targets.empty() || mic_muted) {
 			sender = {};
 		} else {
 			if (!sender) {
@@ -182,8 +193,10 @@ void p2pchat::process_mic() {
 	}
 }
 
+void p2pchat::set_mic_disabled(bool state) {
+	mic_muted = state;
+}
 
-
-
-
-
+void p2pchat::set_sound_disabled(bool state) {
+	sound_muted = state;
+}

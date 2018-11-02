@@ -314,11 +314,13 @@ void display::main_gui::update_menu_bar() {
 				theme_entry("Microsoft Light", theme::MicrosoftLight);
 				theme_entry("Unity Engine 4", theme::UE4);
 			};
-			if (bool sm = sound_muted ; ImGui::MenuItem("Mute speakers", nullptr, sm)) {
-				sound_muted = !sm;
+			if (ImGui::MenuItem("Mute speakers", nullptr, sound_muted)) {
+				sound_muted = !sound_muted;
+				snd_muting_callback(sound_muted);
 			}
-			if (bool mm = mic_muted ; ImGui::MenuItem("Mute microphone", nullptr, mm)) {
-				mic_muted = !mm;
+			if (ImGui::MenuItem("Mute microphone", nullptr, mic_muted)) {
+				mic_muted = !mic_muted;
+				mic_muting_callback(mic_muted);
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Quit")) {
@@ -327,14 +329,6 @@ void display::main_gui::update_menu_bar() {
 		};
 	};
 
-}
-
-void display::main_gui::sound_input(const std::string& source, const sound_buffer_t& sound) {
-	if (sound_muted || ongoing_calls.count(source) == 0) {
-		return;
-	}
-
-	audio_source::play(sound);
 }
 
 void display::main_gui::call_request_input(const std::string& source, const display::call_request& call) {

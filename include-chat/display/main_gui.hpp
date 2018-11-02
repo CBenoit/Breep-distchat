@@ -101,8 +101,6 @@ namespace display {
 
 		bool is_open() { return window.isOpen(); }
 
-		void sound_input(const std::string& source, const sound_buffer_t& sound);
-
 		void call_request_input(const std::string& source, const call_request& call);
 
 		void add_message(const std::string& source, formatted_message&& msg) {
@@ -124,6 +122,14 @@ namespace display {
 
 		void set_call_end_callback(std::function<void(const std::string&)> cec) {
 			call_ending_callback = std::move(cec);
+		}
+
+		void set_mic_muting_callback(std::function<void(bool)> mmc) {
+			mic_muting_callback = std::move(mmc);
+		}
+
+		void set_snd_muting_callback(std::function<void(bool)> smc) {
+			snd_muting_callback = std::move(smc);
 		}
 
 		void add_user(const std::string& username) {
@@ -191,8 +197,8 @@ namespace display {
 		std::function<void(const std::string&, const call_request&)> call_request_callback{[](auto&&...){}};
 
 		// Sound management //
-		std::atomic<bool> sound_muted{false};
-		std::atomic<bool> mic_muted{false};
+		bool sound_muted{false};
+		bool mic_muted{false};
 		std::mutex call_mutex{};
 		std::set<std::string> ongoing_calls{};
 		std::set<std::string> requests_in{};
@@ -201,6 +207,8 @@ namespace display {
 		// mic
 		std::function<void(const std::string&)> call_starting_callback{[](auto&&...){}};
 		std::function<void(const std::string&)> call_ending_callback{[](auto&&...){}};
+		std::function<void(bool)> mic_muting_callback{[](auto&&...){}};
+		std::function<void(bool)> snd_muting_callback{[](auto&&...){}};
 	};
 }
 

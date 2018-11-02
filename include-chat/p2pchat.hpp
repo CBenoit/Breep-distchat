@@ -71,6 +71,10 @@ public:
 
 	void call_stop(const std::string& target);
 
+	void set_mic_disabled(bool state);
+
+	void set_sound_disabled(bool state);
+
 private:
 
 	void process_mic();
@@ -97,8 +101,10 @@ private:
 
 	static constexpr std::chrono::duration mic_update_interval{std::chrono::milliseconds(50)};
 	std::atomic<bool> stop_mic{false};
+	std::atomic<bool> mic_muted{false};
+	std::atomic<bool> sound_muted{false};
 	std::mutex mic_targets_mutex{};
-	std::unordered_set<std::string> mic_targets;
+	std::unordered_set<std::string> mic_targets{};
 	std::thread mic_thread{&p2pchat::process_mic, this};
 
 };

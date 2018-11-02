@@ -112,6 +112,14 @@ int main(int, char*[]) {
 		chat.send_to(target, rq);
 	});
 
+	gui.set_call_start_callback([&chat](const std::string& target) {
+		chat.call_start(target);
+	});
+
+	gui.set_call_end_callback([&chat](const std::string& target) {
+		chat.call_stop(target);
+	});
+
 	while (gui.display());
 
 	return 0;

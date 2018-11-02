@@ -127,7 +127,10 @@ void p2pchat::setup_listeners() {
 			for (auto&& listener : dc_listeners) {
 				listener(*pr);
 			}
+			std::lock_guard lg2(mic_targets_mutex);
+			mic_targets.erase(pr->name());
 		}
+
 	});
 }
 
@@ -135,3 +138,52 @@ void p2pchat::clear_listeners() {
 	dual_network.clear_any();
 	dual_network.remove_connection_predicate();
 }
+
+void p2pchat::call_start(const std::string& target) {
+	std::lock_guard lg(mic_targets_mutex);
+	mic_targets.emplace(target);
+}
+
+void p2pchat::call_stop(const std::string& target) {
+	std::lock_guard lg(mic_targets_mutex);
+	mic_targets.erase(target);
+
+}
+
+void p2pchat::process_mic() {
+	std::optional<sound_sender> sender{};
+
+	while (!stop_mic) {
+		auto starting_time = std::chrono::system_clock::now();
+
+		mic_targets_mutex.lock();
+		if (mic_targets.empty()) {
+			sender = {};
+		} else {
+			if (!sender) {
+				sender = sound_sender::try_build();
+			}
+			if (sender) {
+				if (sender->update_sample()) {
+					for (auto&& callee : mic_targets) {
+						try {
+							sender->send_sample_to(dual_network, peers_by_name.at(callee));
+						} catch (...) {}
+					}
+				}
+			}
+		}
+		mic_targets_mutex.unlock();
+
+		auto send_duration = std::chrono::system_clock::now() - starting_time;
+		if (send_duration < mic_update_interval) {
+			std::this_thread::sleep_for(mic_update_interval - send_duration);
+		}
+	}
+}
+
+
+
+
+
+

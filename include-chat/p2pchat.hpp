@@ -67,7 +67,13 @@ public:
 	template <typename T>
 	void send_to(const std::string& target, T&& value);
 
+	void call_start(const std::string& target);
+
+	void call_stop(const std::string& target);
+
 private:
+
+	void process_mic();
 
 	void setup_listeners();
 
@@ -88,6 +94,12 @@ private:
 	std::mutex disconnection_mutex{};
 	std::vector<connection_callback> co_listeners{};
 	std::vector<connection_callback> dc_listeners{};
+
+	static constexpr std::chrono::duration mic_update_interval{std::chrono::milliseconds(50)};
+	std::atomic<bool> stop_mic{false};
+	std::mutex mic_targets_mutex{};
+	std::unordered_set<std::string> mic_targets;
+	std::thread mic_thread{&p2pchat::process_mic, this};
 
 };
 

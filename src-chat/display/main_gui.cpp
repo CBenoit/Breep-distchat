@@ -86,11 +86,6 @@ display::main_gui::main_gui()
 display::main_gui::~main_gui() {
 	ImGui::SFML::Shutdown();
 	instantiaded = false;
-	should_stop = false;
-	if (ongoing_calls.empty()) {
-		mic_stopper.unlock();
-	}
-	mic_recorder.join();
 }
 
 bool display::main_gui::display() {
@@ -263,9 +258,7 @@ void display::main_gui::update_call_state() {
 						ongoing_calls.insert(requests_in.extract(item.first));
 						call_request_callback(item.first, true);
 						lockless_add_message(item.first, system_message("Call accepted."));
-						if (ongoing_calls.size() == 1) {
-							mic_stopper.unlock();
-						}
+						call_starting_callback(item.first);
 					}
 				};
 				ImGui::SameLine();
@@ -289,9 +282,7 @@ void display::main_gui::update_call_state() {
 					ongoing_calls.erase(item.first);
 					call_request_callback(item.first, false);
 					lockless_add_message(item.first, system_message("Call ended."));
-					if (ongoing_calls.empty()) {
-						mic_stopper.lock();
-					}
+					call_ending_callback(item.first);
 				}
 
 			} else {
@@ -352,9 +343,7 @@ void display::main_gui::call_request_input(const std::string& source, const disp
 	if (call.rq_value) {
 		if (ongoing_calls.insert(requests_out.extract(source)).inserted) {
 			add_message(source, system_message("Call accepted."));
-			if (ongoing_calls.size() == 1) {
-				mic_stopper.unlock();
-			}
+			call_starting_callback(source);
 
 		} else if (requests_in.count(source) == 0) {
 			requests_in.insert(source);
@@ -366,9 +355,7 @@ void display::main_gui::call_request_input(const std::string& source, const disp
 	} else {
 		if (try_erase(ongoing_calls, source)) {
 			add_message(source, system_message("Call ended."));
-			if (ongoing_calls.empty()) {
-				mic_stopper.lock();
-			}
+			call_ending_callback(source);
 
 		} else if (try_erase(requests_out, source)) {
 			add_message(source, system_message("Call denied."));
@@ -388,48 +375,3 @@ void display::main_gui::lockless_add_message(const std::string& source, display:
 		++new_messages[source];
 	}
 }
-
-void display::main_gui::process_mic() {
-	mic_stopper.lock();
-	std::optional<sound_sender> sender{};
-
-	while (!should_stop) {
-		auto starting_time = std::chrono::system_clock::now();
-
-		if (mic_stopper.try_lock()) {
-			mic_stopper.unlock();
-		} else {
-			sender = {};
-			mic_stopper.lock();
-			mic_stopper.unlock();
-		}
-
-		if (!sender) {
-			sender = sound_sender::try_build();
-		}
-		if (sender) {
-			sender->update_sample();
-			std::lock_guard lg(call_mutex);
-			for (auto&& callee : ongoing_calls) {
-				sound_sender_callback(callee, sender.value());
-			}
-		}
-
-		auto send_duration = std::chrono::system_clock::now() - starting_time;
-		if (send_duration < mic_update_interval) {
-			std::this_thread::sleep_for(mic_update_interval - send_duration);
-		}
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-

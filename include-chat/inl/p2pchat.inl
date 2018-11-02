@@ -32,7 +32,9 @@
 
 
 inline p2pchat::~p2pchat() {
+	stop_mic = true;
 	dual_network.disconnect();
+	mic_thread.join();
 }
 
 template<typename T>

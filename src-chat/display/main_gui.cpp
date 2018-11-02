@@ -87,6 +87,9 @@ display::main_gui::~main_gui() {
 	ImGui::SFML::Shutdown();
 	instantiaded = false;
 	should_stop = false;
+	if (ongoing_calls.empty()) {
+		mic_stopper.unlock();
+	}
 	mic_recorder.join();
 }
 

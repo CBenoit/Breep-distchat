@@ -47,6 +47,8 @@ namespace {
 	bool try_erase(std::set<T>& s, const T& val) {
 		return s.erase(val) > 0;
 	}
+
+	bool light_theme_on;
 }
 
 ImVec4 display::imgui_color(colors color, float alpha) {
@@ -56,6 +58,22 @@ ImVec4 display::imgui_color(colors color, float alpha) {
 			static_cast<float>(static_cast<unsigned int>(color) >> 0u & 0xFF) / 255.f,
 			alpha
 	};
+}
+
+ImVec4 display::darken_color_if_light_theme(ImVec4 color) {
+	if (light_theme_on) {
+		float h, s, v;
+		ImGui::ColorConvertRGBtoHSV(color.x, color.y, color.z, h, s, v);
+		if (v > 0.80f) {
+			v = 0.80f;
+		}
+		ImGui::ColorConvertHSVtoRGB(h, s, v, color.x, color.y, color.z);
+	}
+	return color;
+}
+
+bool display::is_light_theme() {
+	return light_theme_on;
 }
 
 bool display::is_instanciated() {
@@ -79,7 +97,8 @@ display::main_gui::main_gui()
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowRounding = 0.f;
 
-	current_theme = theme::dark_itamago;
+	current_theme = theme::cherry;
+	light_theme_on = false;
 	current_theme();
 }
 
@@ -298,21 +317,22 @@ void display::main_gui::update_call_state() {
 }
 
 void display::main_gui::update_menu_bar() {
-	auto theme_entry = [this](const char* theme_name, theme_fnct theme) {
+	auto theme_entry = [this](const char* theme_name, theme_fnct theme, bool is_light_theme) {
 		if (ImGui::MenuItem(theme_name, nullptr, current_theme == theme)) {
 			new_theme = theme;
+			light_theme_on = is_light_theme;
 		}
 	};
 
 	Scoped(MenuBar()) {
 		Scoped(Menu("Options")) {
 			Scoped(Menu("Color theme")) {
-				theme_entry("Cherry", theme::cherry);
-				theme_entry("Dark", theme::dark);
-				theme_entry("Itamago Dark", theme::dark_itamago);
-				theme_entry("Itamago Light", theme::light_itamago);
-				theme_entry("Microsoft Light", theme::MicrosoftLight);
-				theme_entry("Unity Engine 4", theme::UE4);
+				theme_entry("Cherry", theme::cherry, false);
+				theme_entry("Dark", theme::dark, false);
+				theme_entry("Itamago Dark", theme::dark_itamago, false);
+				theme_entry("Itamago Light", theme::light_itamago, true);
+				theme_entry("Microsoft Light", theme::MicrosoftLight, true);
+				theme_entry("Unity Engine 4", theme::UE4, false);
 			};
 			if (ImGui::MenuItem("Mute speakers", nullptr, sound_muted)) {
 				sound_muted = !sound_muted;

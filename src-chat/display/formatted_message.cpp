@@ -17,7 +17,7 @@ namespace {
 	};
 
 	ImVec4 author_color(const std::string& str) {
-		return imgui_color(all_colors[str_hasher(str) % std::size(all_colors)]);
+		return display::darken_color_if_light_theme(imgui_color(all_colors[str_hasher(str) % std::size(all_colors)]));
 	}
 }
 

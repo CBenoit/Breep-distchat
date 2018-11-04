@@ -47,6 +47,8 @@
 #include "sound_sender.hpp"
 
 namespace display {
+	bool is_light_theme();
+
 	enum class colors {
 		red = 0xDC143C,
 		blue = 0x00BFFF,
@@ -62,6 +64,8 @@ namespace display {
 	};
 
 	ImVec4 imgui_color(colors color, float alpha = 1.f);
+
+	ImVec4 darken_color_if_light_theme(ImVec4 color);
 
 	bool is_instanciated();
 

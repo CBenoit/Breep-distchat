@@ -12,12 +12,20 @@
     bool valid;\
 }
 
+#define IMGUIGUARD2(x) struct x { \
+    template <typename... Args>\
+    explicit x(Args&&... args) {ImGui::Begin##x(args...);}\
+    template <typename FuncT>\
+    void operator+(FuncT&& f) { f();}\
+    ~x() { ImGui::End##x(); }\
+}
+
 namespace display {
 	IMGUIGUARD(MenuBar);
 
 	IMGUIGUARD(Menu);
 
-	IMGUIGUARD(Child);
+	IMGUIGUARD2(Child);
 }
 
 #undef IMGUIGUARD

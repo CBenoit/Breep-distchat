@@ -170,6 +170,7 @@ namespace display {
 		void update_chat_area();
 		void update_peers_area();
 		void update_dc_peers_area();
+		void update_misc_buttons();
 		void update_menu_bar();
 		void update_call_state();
 
@@ -180,6 +181,7 @@ namespace display {
 		// Display variables //
 		float peer_name_max_x_size{50.f};
 		float call_state_width{130.f};
+		float text_height{30.f};
 
 		theme_fnct new_theme{nullptr};
 		theme_fnct current_theme{nullptr};

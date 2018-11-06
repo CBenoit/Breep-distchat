@@ -134,6 +134,8 @@ bool display::main_gui::display() {
 	ImGui::SetNextWindowSize(ImVec2{static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
 	ImGui::SetNextWindowPos({});
 
+	text_height = ImGui::CalcTextSize("_").y;
+
 	ImGui::Begin("##Main", nullptr, frame_flags);
 	update_frame();
 	ImGui::End();
@@ -157,18 +159,24 @@ void display::main_gui::update_frame() {
 	ImGui::SameLine();
 
 	Scoped(Child(ImGui::GetID("Left_panel"))) {
-		Scoped(Child(ImGui::GetID("Peers_area"), ImVec2{-(call_state_width - 10.f), ImGui::GetContentRegionAvail().y / 2})) {
+		Scoped(Child(ImGui::GetID("Peers_area"), ImVec2{-(call_state_width - 10.f), ImGui::GetContentRegionAvail().y / 2.f})) {
 			update_peers_area();
 		};
 		ImGui::SameLine();
-		Scoped(Child(ImGui::GetID("Call_area"), ImVec2{0.f, ImGui::GetContentRegionAvail().y / 2})) {
+		Scoped(Child(ImGui::GetID("Call_area"), ImVec2{0.f, ImGui::GetContentRegionAvail().y / 2.f})) {
 			update_call_state();
 		};
 
 		ImGui::Separator();
 
-		Scoped(Child(ImGui::GetID("Disconnected_peers_area"))) {
+		Scoped(Child(ImGui::GetID("Disconnected_peers_area"), ImVec2{0.f, ImGui::GetContentRegionAvail().y - text_height * 2.f - 5.f})) {
 			update_dc_peers_area();
+		};
+
+		ImGui::Separator();
+
+		Scoped(Child(ImGui::GetID("misc_buttons"))) {
+			update_misc_buttons();
 		};
 	};
 }
@@ -235,6 +243,19 @@ void display::main_gui::update_dc_peers_area() {
 			continue;
 		}
 		print_peer(item.first);
+	}
+}
+
+void display::main_gui::update_misc_buttons() {
+	if (ImGui::Button(sound_muted ? "Unmute speakers" : "Mute speakers")) {
+		sound_muted = !sound_muted;
+		snd_muting_callback(sound_muted);
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button(mic_muted ? "Unmute microphone" : "Unmute speakers")) {
+		mic_muted = !mic_muted;
+		mic_muting_callback(mic_muted);
 	}
 }
 
@@ -334,14 +355,6 @@ void display::main_gui::update_menu_bar() {
 				theme_entry("Microsoft Light", theme::MicrosoftLight, true);
 				theme_entry("Unity Engine 4", theme::UE4, false);
 			};
-			if (ImGui::MenuItem("Mute speakers", nullptr, sound_muted)) {
-				sound_muted = !sound_muted;
-				snd_muting_callback(sound_muted);
-			}
-			if (ImGui::MenuItem("Mute microphone", nullptr, mic_muted)) {
-				mic_muted = !mic_muted;
-				mic_muting_callback(mic_muted);
-			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Quit")) {
 				window.close();

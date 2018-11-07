@@ -94,7 +94,7 @@ display::main_gui::main_gui()
 
 	window.setFramerateLimit(60);
 
-	ImGui::SFML::Init(window);
+	ImGui::SFML::Init(window, false);
 	ImGui::GetIO().IniFilename = nullptr; // disable .ini saving
 
 	ImGuiStyle& style = ImGui::GetStyle();

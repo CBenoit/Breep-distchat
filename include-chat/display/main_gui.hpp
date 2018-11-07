@@ -97,8 +97,9 @@ namespace display {
 
 	public:
 		main_gui();
-
+		main_gui(const main_gui&) = delete;
 		~main_gui();
+		main_gui& operator=(const main_gui&) = delete;
 
 		/* return is_open */
 		bool display();

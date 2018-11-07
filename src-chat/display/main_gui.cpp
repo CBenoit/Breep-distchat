@@ -33,7 +33,7 @@
 #include <display/main_gui.hpp>
 #include <imgui_internal.h>
 #include <sound_sender.hpp>
-
+#include <IconsFontAwesome5.h>
 
 #include "display/main_gui.hpp"
 #include "display/imgui_helper.hpp"
@@ -49,6 +49,9 @@ namespace {
 	}
 
 	bool light_theme_on;
+
+	constexpr float DEFAULT_FONT_SIZE = 13.5f;
+	constexpr float LARGE_FONT_SIZE = 22.0f;
 }
 
 ImVec4 display::imgui_color(colors color, float alpha) {
@@ -100,6 +103,11 @@ display::main_gui::main_gui()
 	current_theme = theme::cherry;
 	light_theme_on = false;
 	current_theme();
+
+	// load fonts
+	normal_font = display::loadFonts(DEFAULT_FONT_SIZE);
+	large_font = display::loadFonts(LARGE_FONT_SIZE);
+	ImGui::SFML::UpdateFontTexture();
 }
 
 display::main_gui::~main_gui() {
@@ -135,6 +143,9 @@ bool display::main_gui::display() {
 	ImGui::SetNextWindowPos({});
 
 	text_height = ImGui::CalcTextSize("_").y;
+	ImGui::PushFont(large_font);
+	large_text_height = ImGui::CalcTextSize(ICON_FA_MICROPHONE).y;
+	ImGui::PopFont();
 
 	ImGui::Begin("##Main", nullptr, frame_flags);
 	update_frame();
@@ -169,7 +180,7 @@ void display::main_gui::update_frame() {
 
 		ImGui::Separator();
 
-		Scoped(Child(ImGui::GetID("Disconnected_peers_area"), ImVec2{0.f, ImGui::GetContentRegionAvail().y - text_height * 2.f - 5.f})) {
+		Scoped(Child(ImGui::GetID("Disconnected_peers_area"), ImVec2{0.f, ImGui::GetContentRegionAvail().y - large_text_height - 15.f})) {
 			update_dc_peers_area();
 		};
 
@@ -247,16 +258,20 @@ void display::main_gui::update_dc_peers_area() {
 }
 
 void display::main_gui::update_misc_buttons() {
-	if (ImGui::Button(sound_muted ? "Unmute speakers" : "Mute speakers")) {
+	ImGui::PushFont(large_font);
+
+	if (ImGui::Button(sound_muted ? ICON_FA_VOLUME_MUTE : ICON_FA_VOLUME_UP)) {
 		sound_muted = !sound_muted;
 		snd_muting_callback(sound_muted);
 	}
 
 	ImGui::SameLine();
-	if (ImGui::Button(mic_muted ? "Unmute microphone" : "Unmute speakers")) {
+	if (ImGui::Button(mic_muted ? ICON_FA_MICROPHONE_ALT_SLASH : ICON_FA_MICROPHONE_ALT)) {
 		mic_muted = !mic_muted;
 		mic_muting_callback(mic_muted);
 	}
+
+	ImGui::PopFont();
 }
 
 void display::main_gui::print_peer(const std::string& peer) {

@@ -87,7 +87,7 @@ get_files(
 make_target(
         SysDist-chat "SysDist-chat" ${chat-files}
         INCLUDES "include-chat/" "include-common"
-        EXT_INCLUDES "${SFML_dir}/include/" "${imgui_dir}" "${imgui-sfml_dir}" "breep/include"
+        EXT_INCLUDES "${SFML_dir}/include/" "${imgui_dir}" "${imgui-sfml_dir}" "breep/include" "external/IconFontCppHeaders"
         OPTIONS cxx executable static_runtime
 )
 
@@ -126,3 +126,10 @@ target_set_output_directory(sfml-system "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 target_set_output_directory(sfml-window "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 target_set_output_directory(sfml-graphics "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 target_set_output_directory(SysDist-chat "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+
+# Resources
+configure_folder(
+        "${CMAKE_SOURCE_DIR}/resources"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources"
+        COPYONLY
+)

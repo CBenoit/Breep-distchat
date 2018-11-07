@@ -182,6 +182,7 @@ namespace display {
 		float peer_name_max_x_size{50.f};
 		float call_state_width{130.f};
 		float text_height{30.f};
+		float large_text_height{50.f};
 
 		theme_fnct new_theme{nullptr};
 		theme_fnct current_theme{nullptr};
@@ -215,6 +216,10 @@ namespace display {
 		std::function<void(const std::string&)> call_ending_callback{[](auto&&...){}};
 		std::function<void(bool)> mic_muting_callback{[](auto&&...){}};
 		std::function<void(bool)> snd_muting_callback{[](auto&&...){}};
+
+		// fonts
+		ImFont* normal_font{nullptr};
+		ImFont* large_font{nullptr};
 	};
 }
 

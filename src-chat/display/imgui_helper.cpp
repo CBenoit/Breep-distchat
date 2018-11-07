@@ -23,39 +23,39 @@
  *                                                                                   *
  *************************************************************************************/
 
-#ifndef SYSDIST_SERVER_IMGUI_HELPER_HPP
-#define SYSDIST_SERVER_IMGUI_HELPER_HPP
+#include <iostream>
 
+#include <IconsFontAwesome5.h>
 #include <imgui.h>
 
-#define IMGUIGUARD(x) struct x { \
-    template <typename... Args>\
-    explicit x(Args&&... args) : valid{ImGui::Begin##x(args...)}{}\
-    template <typename FuncT>\
-    void operator+(FuncT&& f) { if (valid) f();}\
-    ~x() { if (valid) ImGui::End##x(); }\
-    bool valid;\
+#include "display/imgui_helper.hpp"
+
+namespace {
+	constexpr const char* DROID_SANS_MONO_FONT_PATH = "resources/fonts/DroidSans/DroidSansMono.ttf";
+	constexpr const char* DEFAULT_FONT_PATH = DROID_SANS_MONO_FONT_PATH;
+	constexpr const char* FONTAWESOME_FONT_PATH = "resources/fonts/fontawesome-free-5.4.0/" FONT_ICON_FILE_NAME_FAS;
 }
 
-#define IMGUIGUARD2(x) struct x { \
-    template <typename... Args>\
-    explicit x(Args&&... args) {ImGui::Begin##x(args...);}\
-    template <typename FuncT>\
-    void operator+(FuncT&& f) { f();}\
-    ~x() { ImGui::End##x(); }\
+ImFont* display::loadFonts(float pixel_size) {
+	ImGuiIO& io = ImGui::GetIO();
+
+	ImFont* default_font = io.Fonts->AddFontFromFileTTF(DEFAULT_FONT_PATH, pixel_size);
+	if(!default_font) {
+		io.Fonts->AddFontDefault();
+		std::cerr << "Failed to load font " << DEFAULT_FONT_PATH << " default font is used instead\n";
+	}
+
+	static constexpr ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+	ImFontConfig icons_config;
+	icons_config.MergeMode = true;
+	icons_config.PixelSnapH = true;
+	icons_config.GlyphMinAdvanceX = pixel_size;
+	ImFont* font = io.Fonts->AddFontFromFileTTF(FONTAWESOME_FONT_PATH, pixel_size, &icons_config, icons_ranges);
+
+	if(!font) {
+		std::cerr << "Failed to load fontawesome (" << FONTAWESOME_FONT_PATH << "): icons disabled\n";
+		font = default_font;
+	}
+
+	return font;
 }
-
-namespace display {
-	ImFont* loadFonts(float pixel_size);
-
-	IMGUIGUARD(MenuBar);
-
-	IMGUIGUARD(Menu);
-
-	IMGUIGUARD2(Child);
-}
-
-#undef IMGUIGUARD
-#define Scoped(x) x + [&]()
-
-#endif //SYSDIST_SERVER_IMGUI_HELPER_HPP

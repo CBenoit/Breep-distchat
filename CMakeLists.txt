@@ -42,7 +42,7 @@ endif()
 set(CMAKE_DEBUG_POSTFIX _d)
 
 # configure SFML folder in IDE
-foreach(sfml_target IN ITEMS sfml-system sfml-network sfml-window sfml-graphics sfml-audio sfml-main)
+foreach(sfml_target IN ITEMS sfml-system sfml-window sfml-graphics sfml-audio sfml-main)
     if(TARGET ${sfml_target})
         set_target_properties(${sfml_target} PROPERTIES FOLDER external/SFML)
     endif()
@@ -73,7 +73,7 @@ make_target(
         INCLUDES "${SFML_dir}/include/" "${imgui_dir}" "${imgui-sfml_dir}"
         OPTIONS cxx no_warnings static_runtime
 )
-target_link_libraries(ImGui-SFML PRIVATE "sfml-system" "sfml-network" "sfml-window" "sfml-graphics" "sfml-audio")
+target_link_libraries(ImGui-SFML PRIVATE "sfml-system" "sfml-window" "sfml-graphics" "sfml-audio")
 
 # Setup SysDist-chat
 get_files(

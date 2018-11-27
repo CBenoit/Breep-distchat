@@ -108,6 +108,10 @@ namespace display {
 
 		void call_request_input(const std::string& source, const call_request& call);
 
+		void set_user_name(const std::string& name) {
+			user_name = name;
+		}
+
 		void add_message(const std::string& source, formatted_message&& msg) {
 			std::lock_guard lg{msg_mutex};
 			lockless_add_message(source, std::move(msg));
@@ -171,7 +175,7 @@ namespace display {
 		void update_chat_area();
 		void update_peers_area();
 		void update_dc_peers_area();
-		void update_misc_buttons();
+		void update_misc_area();
 		void update_menu_bar();
 		void update_call_state();
 
@@ -193,6 +197,8 @@ namespace display {
 		const int frame_flags;
 
 		std::optional<std::string> focused_user{};
+
+		std::string user_name{};
 
 		// Network input //
 		std::mutex msg_mutex{};

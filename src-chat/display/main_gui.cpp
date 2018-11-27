@@ -186,8 +186,8 @@ void display::main_gui::update_frame() {
 
 		ImGui::Separator();
 
-		Scoped(Child(ImGui::GetID("misc_buttons"))) {
-			update_misc_buttons();
+		Scoped(Child(ImGui::GetID("misc_area"), ImVec2(0.f,0.f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			update_misc_area();
 		};
 	};
 }
@@ -257,7 +257,7 @@ void display::main_gui::update_dc_peers_area() {
 	}
 }
 
-void display::main_gui::update_misc_buttons() {
+void display::main_gui::update_misc_area() {
 	ImGui::PushFont(large_font);
 
 	if (ImGui::Button(sound_muted ? ICON_FA_VOLUME_MUTE : ICON_FA_VOLUME_UP)) {
@@ -272,6 +272,10 @@ void display::main_gui::update_misc_buttons() {
 	}
 
 	ImGui::PopFont();
+	ImGui::SameLine();
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.f);
+	ImGui::TextUnformatted(user_name.c_str());
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3.f);
 }
 
 void display::main_gui::print_peer(const std::string& peer) {
@@ -308,7 +312,7 @@ void display::main_gui::update_call_state() {
 		ImGui::PushID(item.first.data());
 		if (item.second.can_send_messages) {
 			if (requests_in.count(item.first) > 0) {
-				Scoped(Child("Accept_child", ImVec2{ImGui::GetContentRegionAvailWidth() / 2, 0.f})) {
+				Scoped(Child("Accept_child", ImVec2{ImGui::GetContentRegionAvailWidth() / 2, text_height})) {
 					if (ImGui::Selectable("Accept")) {
 						ongoing_calls.insert(requests_in.extract(item.first));
 						call_request_callback(item.first, true);
@@ -317,7 +321,7 @@ void display::main_gui::update_call_state() {
 					}
 				};
 				ImGui::SameLine();
-				Scoped(Child("Deny_child")) {
+				Scoped(Child("Deny_child", ImVec2{ImGui::GetContentRegionAvailWidth(), text_height})) {
 					if (ImGui::Selectable("Deny")) {
 						requests_in.erase(item.first);
 						call_request_callback(item.first, false);

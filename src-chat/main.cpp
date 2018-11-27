@@ -95,6 +95,8 @@ int main(int, char*[]) {
 		return 1;
 	}
 
+	gui.set_user_name(fields.username.value());
+
 	gui.set_textinput_callback([&gui, &chat](std::string_view v) {
 		std::string s(v);
 		gui.add_message(*gui.get_focused_name(), display::user_message(chat.me(), v));
